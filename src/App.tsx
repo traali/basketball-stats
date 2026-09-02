@@ -24,6 +24,16 @@ export function App() {
   const isEmbed = Boolean(query.embed)
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__APP_BUILD_INFO__ = {
+        version: typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0',
+        commit: typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : 'dev',
+        buildTime: typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : new Date().toISOString()
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     if (query.targetId) {
       setCurrentMatchId(query.targetId)
     }
@@ -169,6 +179,22 @@ export function App() {
             <p className="text-slate-400">Ottelutietoja ei löytynyt.</p>
           </div>
         )}
+
+        <footer className="mt-8 pt-4 border-t border-slate-700/60 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-200">Basketball Stats</span>
+            <span>•</span>
+            <span
+              data-testid="app-version-badge"
+              className="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 font-mono text-[10px] text-orange-400"
+            >
+              v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0'} (git:{typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : 'dev'})
+            </span>
+          </div>
+          <div className="text-[10px] opacity-75">
+            Koripallotilastot & Tulospalvelu
+          </div>
+        </footer>
       </main>
     </div>
   )
