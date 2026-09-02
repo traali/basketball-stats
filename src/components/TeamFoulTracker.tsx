@@ -32,7 +32,7 @@ export const TeamFoulTracker: React.FC<TeamFoulTrackerProps> = ({
           <div className="flex gap-1.5 mb-2">
             {[1, 2, 3, 4, 5].map((idx) => (
               <div
-                key={idx}
+                key={`home-foul-${idx}`}
                 className={`w-3 h-3 rounded-full ${
                   idx <= teamFoulsHome ? (teamFoulsHome >= 5 ? 'bg-rose-500' : 'bg-amber-400') : 'bg-slate-700'
                 }`}
@@ -53,7 +53,7 @@ export const TeamFoulTracker: React.FC<TeamFoulTrackerProps> = ({
           <div className="flex gap-1.5 mb-2">
             {[1, 2, 3, 4, 5].map((idx) => (
               <div
-                key={idx}
+                key={`away-foul-${idx}`}
                 className={`w-3 h-3 rounded-full ${
                   idx <= teamFoulsAway ? (teamFoulsAway >= 5 ? 'bg-rose-500' : 'bg-amber-400') : 'bg-slate-700'
                 }`}

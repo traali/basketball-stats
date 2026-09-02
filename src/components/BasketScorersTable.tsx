@@ -20,7 +20,7 @@ export const BasketScorersTable: React.FC<BasketScorersTableProps> = ({ leaders 
       <div className="space-y-2">
         {leaders.map((leader, idx) => (
           <div
-            key={idx}
+            key={`${leader.playerName}-${leader.teamName}-${leader.shirtNumber}`}
             className="flex items-center justify-between p-3 rounded-xl bg-[#0B132B]/60 border border-slate-800 text-xs"
           >
             <div className="flex items-center gap-3">
