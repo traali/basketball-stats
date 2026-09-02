@@ -77,17 +77,10 @@ export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDeta
       }
     }
 
-    // Default sample leaders if box score is not filled
-    if (leaders.length === 0) {
-      leaders.push(
-        { playerName: 'M. Salonen', shirtNumber: '7', teamName: String(m.team_A_name || 'Koti'), points: 18, threePointers: 3, fouls: 2 },
-        { playerName: 'E. Koskinen', shirtNumber: '11', teamName: String(m.team_A_name || 'Koti'), points: 14, threePointers: 1, fouls: 3 },
-        { playerName: 'J. Virtanen', shirtNumber: '23', teamName: String(m.team_B_name || 'Vieras'), points: 22, threePointers: 4, fouls: 1 },
-        { playerName: 'A. Niemi', shirtNumber: '4', teamName: String(m.team_B_name || 'Vieras'), points: 12, threePointers: 0, fouls: 4 }
-      )
-    }
-
     leaders.sort((a, b) => b.points - a.points)
+
+    const scoreHome = Number(m.fs_A || quarters.reduce((acc, q) => acc + q.scoreHome, 0) || 0)
+    const scoreAway = Number(m.fs_B || quarters.reduce((acc, q) => acc + q.scoreAway, 0) || 0)
 
     return {
       matchId: String(m.match_id || matchId),
@@ -99,12 +92,12 @@ export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDeta
       venueName: String(m.venue_name || 'Pelihalli'),
       venueLat: m.venue_lat ? Number(m.venue_lat) : undefined,
       venueLon: m.venue_lon ? Number(m.venue_lon) : undefined,
-      homeTeamName: String(m.team_A_name || 'Tapiolan Honka'),
-      awayTeamName: String(m.team_B_name || 'Leppävaaran Pyrintö (LePy)'),
+      homeTeamName: String(m.team_A_name || 'Koti'),
+      awayTeamName: String(m.team_B_name || 'Vieras'),
       homeTeamId: m.team_A_id ? String(m.team_A_id) : undefined,
       awayTeamId: m.team_B_id ? String(m.team_B_id) : undefined,
-      scoreHome: Number(m.fs_A || quarters.reduce((acc, q) => acc + q.scoreHome, 0) || 68),
-      scoreAway: Number(m.fs_B || quarters.reduce((acc, q) => acc + q.scoreAway, 0) || 62),
+      scoreHome,
+      scoreAway,
       isLive: m.status === 'Live',
       referee1: m.referee_1_name ? String(m.referee_1_name) : undefined,
       referee2: m.referee_2_name ? String(m.referee_2_name) : undefined,
