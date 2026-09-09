@@ -6,8 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "lint": "eslint src",
     "preview": "vite preview",
+    "lint": "eslint src --max-warnings=0",
+    "typecheck": "tsc -b --noEmit",
+    "check:types": "npm run typecheck",
+    "test": "node --test tests/basketInvariants.test.mjs",
+    "check": "npm run typecheck && npm run lint && npm run test",
     "visit": "node scripts/monastery-visitor.mjs"
   },
   "dependencies": {

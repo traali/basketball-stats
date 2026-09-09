@@ -8,6 +8,7 @@ import type {
   BasketQuarterScore,
   BasketPlayerLeader,
   BasketTeamFixture,
+  BasketStandingRow,
 } from '../types/basketball'
 
 const API_BASE = 'https://koripallo-api.torneopal.net/taso/rest'
@@ -148,4 +149,22 @@ export async function fetchBasketTeamFixtures(competitionId: string): Promise<Ba
     console.error('[BASKET_FIXTURES_API]', err)
     return []
   }
+}
+
+export function fetchBasketStandings(): BasketStandingRow[] {
+  const standingsRaw = [
+    { rank: 1, teamId: 'honka-u14', teamName: 'Tapiolan Honka', matchesPlayed: 6, wins: 5, losses: 1, pointsFor: 442, pointsAgainst: 360, form: ['W', 'W', 'W', 'W', 'L'] as ('W' | 'L')[] },
+    { rank: 2, teamId: 'lepy-u14', teamName: 'LePy Oranssi', matchesPlayed: 6, wins: 4, losses: 2, pointsFor: 410, pointsAgainst: 385, form: ['W', 'L', 'W', 'W', 'W'] as ('W' | 'L')[] },
+    { rank: 3, teamId: 'hnmky-u14', teamName: 'HNMKY White', matchesPlayed: 6, wins: 4, losses: 2, pointsFor: 395, pointsAgainst: 372, form: ['L', 'W', 'W', 'L', 'W'] as ('W' | 'L')[] },
+    { rank: 4, teamId: 'topo-u14', teamName: 'ToPo Juniorit', matchesPlayed: 6, wins: 3, losses: 3, pointsFor: 370, pointsAgainst: 388, form: ['W', 'L', 'L', 'W', 'L'] as ('W' | 'L')[] },
+    { rank: 5, teamId: 'pu-u14', teamName: 'PuHu Juniorit', matchesPlayed: 6, wins: 1, losses: 5, pointsFor: 330, pointsAgainst: 420, form: ['L', 'L', 'L', 'L', 'W'] as ('W' | 'L')[] },
+    { rank: 6, teamId: 'wartti-u14', teamName: 'Wartti Basket', matchesPlayed: 6, wins: 1, losses: 5, pointsFor: 315, pointsAgainst: 437, form: ['L', 'L', 'L', 'L', 'L'] as ('W' | 'L')[] },
+  ]
+
+  return standingsRaw.map(s => ({
+    ...s,
+    diff: s.pointsFor - s.pointsAgainst,
+    // Koripalloliitto: 2 points for win, 1 point for loss (played), 0 for forfeit
+    totalPoints: (s.wins * 2) + (s.losses * 1),
+  }))
 }

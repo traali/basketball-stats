@@ -61,3 +61,24 @@ export interface BasketTeamFixture {
   venueName: string
   categoryName: string
 }
+
+export interface BasketStandingRow {
+  rank: number
+  teamId: string
+  teamName: string
+  matchesPlayed: number
+  wins: number
+  losses: number
+  pointsFor: number
+  pointsAgainst: number
+  diff: number
+  totalPoints: number // Koripalloliitto: 2 pts win, 1 pt loss
+  form: ('W' | 'L')[]
+}
+
+export interface CustomBasketTeam {
+  id: string
+  name: string
+  category: string
+  addedAt: string
+}

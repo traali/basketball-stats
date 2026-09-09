@@ -3,19 +3,33 @@ import { Header } from './components/Header'
 import { QuarterScoreCard } from './components/QuarterScoreCard'
 import { TeamFoulTracker } from './components/TeamFoulTracker'
 import { BasketScorersTable } from './components/BasketScorersTable'
+import { BasketStandingsTable } from './components/BasketStandingsTable'
 import { BasketScheduleView } from './components/BasketScheduleView'
+import { BasketTeamOnboarding } from './components/BasketTeamOnboarding'
 import { BasketPreviewExport } from './components/BasketPreviewExport'
-import { fetchBasketMatch, fetchBasketTeamFixtures } from './services/basketApi'
-import type { BasketMatchDetail, BasketTeamFixture } from './types/basketball'
+import { fetchBasketMatch, fetchBasketTeamFixtures, fetchBasketStandings } from './services/basketApi'
+import type { BasketMatchDetail, BasketTeamFixture, BasketStandingRow } from './types/basketball'
 import { parseIncomingCrossRepoQuery } from './types/contracts'
-import { Loader2, Calendar, Award, ShieldAlert, Share2 } from 'lucide-react'
+import { Loader2, Calendar, Award, ShieldAlert, Share2, Trophy, PlusCircle } from 'lucide-react'
 
-type TabType = 'match' | 'points' | 'fouls' | 'schedule' | 'export'
+type TabType = 'match' | 'points' | 'fouls' | 'standings' | 'schedule' | 'onboarding' | 'export'
+
+function getInitialMatchId(search: string): string {
+  if (typeof window !== 'undefined') {
+    const pathname = window.location.pathname
+    const matchMatch = pathname.match(/\/match\/([^/]+)/)
+    if (matchMatch) return decodeURIComponent(matchMatch[1])
+  }
+  const q = parseIncomingCrossRepoQuery(new URLSearchParams(search))
+  return q.targetId || '1011397'
+}
 
 export function App() {
   const [match, setMatch] = useState<BasketMatchDetail | null>(null)
   const [fixtures, setFixtures] = useState<BasketTeamFixture[]>([])
-  const [currentMatchId, setCurrentMatchId] = useState('1011397')
+  const [standings, setStandings] = useState<BasketStandingRow[]>([])
+  const [currentMatchId, setCurrentMatchId] = useState(() => getInitialMatchId(window.location.search))
+  const [currentTeamId, setCurrentTeamId] = useState('honka-u14')
   const [activeTab, setActiveTab] = useState<TabType>('match')
   const [loading, setLoading] = useState(true)
 
@@ -28,16 +42,18 @@ export function App() {
       window.__APP_BUILD_INFO__ = {
         version: typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0',
         commit: typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : 'dev',
-        buildTime: typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : new Date().toISOString()
+        buildTime: typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : new Date().toISOString(),
       }
     }
   }, [])
 
   useEffect(() => {
-    if (query.targetId) {
-      setCurrentMatchId(query.targetId)
+    const handlePopState = () => {
+      setCurrentMatchId(getInitialMatchId(window.location.search))
     }
-  }, [query.targetId])
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   useEffect(() => {
     async function loadData() {
@@ -51,14 +67,20 @@ export function App() {
         setMatch(matchData)
       }
       setFixtures(fixturesData)
+      setStandings(fetchBasketStandings())
       setLoading(false)
     }
 
     loadData()
-  }, [currentMatchId])
+  }, [currentMatchId, currentTeamId])
 
   const handleSelectMatch = (matchId: string) => {
     setCurrentMatchId(matchId)
+    setActiveTab('match')
+  }
+
+  const handleSelectTeam = (teamId: string) => {
+    setCurrentTeamId(teamId)
     setActiveTab('match')
   }
 
@@ -103,6 +125,17 @@ export function App() {
             Virheet & Bonus
           </button>
           <button
+            onClick={() => setActiveTab('standings')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap ${
+              activeTab === 'standings'
+                ? 'bg-[#3A506B] text-[#6FFFE9] shadow-md'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            Sarjataulukko
+          </button>
+          <button
             onClick={() => setActiveTab('schedule')}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap ${
               activeTab === 'schedule'
@@ -112,6 +145,17 @@ export function App() {
           >
             <Calendar className="w-3.5 h-3.5" />
             Otteluohjelma ({fixtures.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('onboarding')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap ${
+              activeTab === 'onboarding'
+                ? 'bg-[#3A506B] text-[#6FFFE9] shadow-md'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
+            Lisää joukkue
           </button>
           <button
             onClick={() => setActiveTab('export')}
@@ -164,11 +208,25 @@ export function App() {
               </div>
             )}
 
+            {activeTab === 'standings' && (
+              <BasketStandingsTable
+                standings={standings}
+                highlightTeamId={currentTeamId}
+              />
+            )}
+
             {activeTab === 'schedule' && (
               <BasketScheduleView
                 fixtures={fixtures}
                 onSelectMatch={handleSelectMatch}
                 currentMatchId={currentMatchId}
+              />
+            )}
+
+            {activeTab === 'onboarding' && (
+              <BasketTeamOnboarding
+                currentTeamId={currentTeamId}
+                onSelectTeam={handleSelectTeam}
               />
             )}
 
