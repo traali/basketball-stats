@@ -32,16 +32,44 @@ export const QuarterScoreCard: React.FC<QuarterScoreCardProps> = ({ match }) => 
           <span className="font-bold text-base sm:text-lg text-slate-100">{match.homeTeamName}</span>
         </div>
 
-        <div className="flex flex-col items-center">
-          <div className="flex items-center gap-3 text-3xl sm:text-4xl font-black tracking-tight text-white">
-            <span>{match.scoreHome}</span>
-            <span className="text-slate-500 font-normal">:</span>
-            <span>{match.scoreAway}</span>
-          </div>
-          <span className="text-xs uppercase font-bold tracking-widest text-[#6FFFE9] mt-1 bg-[#0B132B] px-3 py-1 rounded-full border border-slate-700">
-            {match.isLive ? 'LIVE' : 'LOPPUTULOS'}
-          </span>
-        </div>
+        {(() => {
+          const isFuture = (() => {
+            if (match.isLive) return false;
+            if (match.scoreHome === 0 && match.scoreAway === 0) return true;
+            if (match.date) {
+              const matchDate = new Date(`${match.date}T${match.time || '00:00'}`);
+              if (!isNaN(matchDate.getTime()) && matchDate > new Date()) return true;
+            }
+            return false;
+          })();
+
+          return (
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-3 text-3xl sm:text-4xl font-black tracking-tight text-white">
+                {isFuture && match.scoreHome === 0 && match.scoreAway === 0 ? (
+                  <span className="text-slate-400 text-2xl font-bold">vs</span>
+                ) : (
+                  <>
+                    <span>{match.scoreHome}</span>
+                    <span className="text-slate-500 font-normal">:</span>
+                    <span>{match.scoreAway}</span>
+                  </>
+                )}
+              </div>
+              <span
+                className={`text-xs uppercase font-bold tracking-widest mt-1 px-3 py-1 rounded-full border ${
+                  match.isLive
+                    ? 'text-red-400 bg-red-950/40 border-red-800 animate-pulse'
+                    : isFuture
+                    ? 'text-amber-300 bg-amber-950/40 border-amber-700/60'
+                    : 'text-[#6FFFE9] bg-[#0B132B] border-slate-700'
+                }`}
+              >
+                {match.isLive ? '🔴 LIVE' : isFuture ? 'TULEVA OTTELU' : 'LOPPUTULOS'}
+              </span>
+            </div>
+          );
+        })()}
 
         <div className="flex flex-col items-center">
           <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-[#5BC0BE] text-base mb-2">
