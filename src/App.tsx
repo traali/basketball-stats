@@ -230,7 +230,7 @@ export function App() {
               />
             )}
 
-            {activeTab === 'export' && <BasketPreviewExport match={match} />}
+            {activeTab === 'export' && <BasketPreviewExport match={match} standings={standings} />}
           </>
         ) : (
           <div className="p-8 text-center bg-[#1C2541] rounded-2xl border border-slate-700">
