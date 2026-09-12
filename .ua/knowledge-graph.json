@@ -1,0 +1,1547 @@
+{
+  "version": "1.0.0",
+  "kind": "codebase",
+  "project": {
+    "name": "basketball-stats",
+    "languages": [
+      "javascript",
+      "typescript"
+    ],
+    "frameworks": [
+      "react",
+      "vite"
+    ],
+    "description": "Monastery basketball-stats",
+    "analyzedAt": "2026-09-12T10:44:07.623Z",
+    "gitCommitHash": "fcf6aa7d57a1cdad036560951c02d7ca0d485d8a"
+  },
+  "nodes": [
+    {
+      "id": "pipeline:.github/workflows/cd.yml",
+      "type": "pipeline",
+      "name": "cd.yml",
+      "summary": "CI/CD workflow",
+      "tags": [
+        "ci"
+      ],
+      "complexity": "simple",
+      "filePath": ".github/workflows/cd.yml"
+    },
+    {
+      "id": "pipeline:.github/workflows/monastic-visit.yml",
+      "type": "pipeline",
+      "name": "monastic-visit.yml",
+      "summary": "CI/CD workflow",
+      "tags": [
+        "ci"
+      ],
+      "complexity": "simple",
+      "filePath": ".github/workflows/monastic-visit.yml"
+    },
+    {
+      "id": "document:AGENTS.md",
+      "type": "document",
+      "name": "AGENTS.md",
+      "summary": "AGENTS.md — The Rule of the Basketball-Stats Monastery",
+      "tags": [
+        "docs"
+      ],
+      "complexity": "simple",
+      "filePath": "AGENTS.md"
+    },
+    {
+      "id": "document:ROLL.md",
+      "type": "document",
+      "name": "ROLL.md",
+      "summary": "ROLL.md — The Chronicle of Basketball-Stats",
+      "tags": [
+        "docs"
+      ],
+      "complexity": "simple",
+      "filePath": "ROLL.md"
+    },
+    {
+      "id": "document:docs/plans/HOUSE_TEST_SPEC.md",
+      "type": "document",
+      "name": "HOUSE_TEST_SPEC.md",
+      "summary": "Basketball Stats — 5-point test spec",
+      "tags": [
+        "docs"
+      ],
+      "complexity": "simple",
+      "filePath": "docs/plans/HOUSE_TEST_SPEC.md"
+    },
+    {
+      "id": "file:eslint.config.js",
+      "type": "file",
+      "name": "eslint.config.js",
+      "summary": "extends: [js.configs.recommended, ...tseslint.configs.recommended],",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "eslint.config.js"
+    },
+    {
+      "id": "config:federation.neighbors.json",
+      "type": "config",
+      "name": "federation.neighbors.json",
+      "summary": "Config federation.neighbors.json",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "federation.neighbors.json"
+    },
+    {
+      "id": "config:lefthook.yml",
+      "type": "config",
+      "name": "lefthook.yml",
+      "summary": "Config lefthook.yml",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "lefthook.yml"
+    },
+    {
+      "id": "config:package.json",
+      "type": "config",
+      "name": "package.json",
+      "summary": "Config package.json",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "package.json"
+    },
+    {
+      "id": "file:postcss.config.js",
+      "type": "file",
+      "name": "postcss.config.js",
+      "summary": "plugins: {",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "postcss.config.js"
+    },
+    {
+      "id": "file:scripts/check-neighbors.mjs",
+      "type": "file",
+      "name": "check-neighbors.mjs",
+      "summary": "#!/usr/bin/env node",
+      "tags": [
+        "tooling"
+      ],
+      "complexity": "complex",
+      "filePath": "scripts/check-neighbors.mjs"
+    },
+    {
+      "id": "endpoint:scripts/check-neighbors.mjs:taso",
+      "type": "endpoint",
+      "name": "Torneopal/TASO",
+      "summary": "Association REST client",
+      "tags": [
+        "taso",
+        "tooling"
+      ],
+      "complexity": "moderate",
+      "filePath": "scripts/check-neighbors.mjs"
+    },
+    {
+      "id": "file:scripts/git-guard.mjs",
+      "type": "file",
+      "name": "git-guard.mjs",
+      "summary": "#!/usr/bin/env node",
+      "tags": [
+        "tooling"
+      ],
+      "complexity": "simple",
+      "filePath": "scripts/git-guard.mjs"
+    },
+    {
+      "id": "file:scripts/monastery-visitor.mjs",
+      "type": "file",
+      "name": "monastery-visitor.mjs",
+      "summary": "const ROOT = resolve(process.cwd())",
+      "tags": [
+        "tooling"
+      ],
+      "complexity": "simple",
+      "filePath": "scripts/monastery-visitor.mjs"
+    },
+    {
+      "id": "file:scripts/understand.mjs",
+      "type": "file",
+      "name": "understand.mjs",
+      "summary": "#!/usr/bin/env node",
+      "tags": [
+        "tooling"
+      ],
+      "complexity": "complex",
+      "filePath": "scripts/understand.mjs"
+    },
+    {
+      "id": "endpoint:scripts/understand.mjs:taso",
+      "type": "endpoint",
+      "name": "Torneopal/TASO",
+      "summary": "Association REST client",
+      "tags": [
+        "taso",
+        "tooling"
+      ],
+      "complexity": "moderate",
+      "filePath": "scripts/understand.mjs"
+    },
+    {
+      "id": "file:src/App.tsx",
+      "type": "file",
+      "name": "App.tsx",
+      "summary": "type TabType = 'match' | 'points' | 'fouls' | 'standings' | 'schedule' | 'onboarding' | 'export'",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "complex",
+      "filePath": "src/App.tsx"
+    },
+    {
+      "id": "function:src/App.tsx:App",
+      "type": "function",
+      "name": "App",
+      "summary": "function App in src/App.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/App.tsx",
+      "lineRange": [
+        27,
+        27
+      ]
+    },
+    {
+      "id": "file:src/components/BasketPreviewExport.tsx",
+      "type": "file",
+      "name": "BasketPreviewExport.tsx",
+      "summary": "interface BasketPreviewExportProps {",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/BasketPreviewExport.tsx"
+    },
+    {
+      "id": "function:src/components/BasketPreviewExport.tsx:BasketPreviewExport",
+      "type": "function",
+      "name": "BasketPreviewExport",
+      "summary": "function BasketPreviewExport in src/components/BasketPreviewExport.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/BasketPreviewExport.tsx",
+      "lineRange": [
+        9,
+        9
+      ]
+    },
+    {
+      "id": "file:src/components/BasketScheduleView.tsx",
+      "type": "file",
+      "name": "BasketScheduleView.tsx",
+      "summary": "interface BasketScheduleViewProps {",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/BasketScheduleView.tsx"
+    },
+    {
+      "id": "function:src/components/BasketScheduleView.tsx:BasketScheduleView",
+      "type": "function",
+      "name": "BasketScheduleView",
+      "summary": "function BasketScheduleView in src/components/BasketScheduleView.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/BasketScheduleView.tsx",
+      "lineRange": [
+        11,
+        11
+      ]
+    },
+    {
+      "id": "file:src/components/BasketScorersTable.tsx",
+      "type": "file",
+      "name": "BasketScorersTable.tsx",
+      "summary": "interface BasketScorersTableProps {",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/BasketScorersTable.tsx"
+    },
+    {
+      "id": "function:src/components/BasketScorersTable.tsx:BasketScorersTable",
+      "type": "function",
+      "name": "BasketScorersTable",
+      "summary": "function BasketScorersTable in src/components/BasketScorersTable.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/BasketScorersTable.tsx",
+      "lineRange": [
+        9,
+        9
+      ]
+    },
+    {
+      "id": "file:src/components/BasketStandingsTable.tsx",
+      "type": "file",
+      "name": "BasketStandingsTable.tsx",
+      "summary": "interface BasketStandingsTableProps {",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/BasketStandingsTable.tsx"
+    },
+    {
+      "id": "function:src/components/BasketStandingsTable.tsx:BasketStandingsTable",
+      "type": "function",
+      "name": "BasketStandingsTable",
+      "summary": "function BasketStandingsTable in src/components/BasketStandingsTable.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/BasketStandingsTable.tsx",
+      "lineRange": [
+        8,
+        8
+      ]
+    },
+    {
+      "id": "file:src/components/BasketTeamOnboarding.tsx",
+      "type": "file",
+      "name": "BasketTeamOnboarding.tsx",
+      "summary": "interface BasketTeamOnboardingProps {",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "moderate",
+      "filePath": "src/components/BasketTeamOnboarding.tsx"
+    },
+    {
+      "id": "function:src/components/BasketTeamOnboarding.tsx:BasketTeamOnboarding",
+      "type": "function",
+      "name": "BasketTeamOnboarding",
+      "summary": "function BasketTeamOnboarding in src/components/BasketTeamOnboarding.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/BasketTeamOnboarding.tsx",
+      "lineRange": [
+        19,
+        19
+      ]
+    },
+    {
+      "id": "file:src/components/Header.tsx",
+      "type": "file",
+      "name": "Header.tsx",
+      "summary": "interface HeaderProps {",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/Header.tsx"
+    },
+    {
+      "id": "function:src/components/Header.tsx:Header",
+      "type": "function",
+      "name": "Header",
+      "summary": "function Header in src/components/Header.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/Header.tsx",
+      "lineRange": [
+        8,
+        8
+      ]
+    },
+    {
+      "id": "endpoint:src/components/Header.tsx:taso",
+      "type": "endpoint",
+      "name": "Torneopal/TASO",
+      "summary": "Association REST client",
+      "tags": [
+        "taso",
+        "ui"
+      ],
+      "complexity": "moderate",
+      "filePath": "src/components/Header.tsx"
+    },
+    {
+      "id": "file:src/components/QuarterScoreCard.tsx",
+      "type": "file",
+      "name": "QuarterScoreCard.tsx",
+      "summary": "interface QuarterScoreCardProps {",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "moderate",
+      "filePath": "src/components/QuarterScoreCard.tsx"
+    },
+    {
+      "id": "function:src/components/QuarterScoreCard.tsx:QuarterScoreCard",
+      "type": "function",
+      "name": "QuarterScoreCard",
+      "summary": "function QuarterScoreCard in src/components/QuarterScoreCard.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/QuarterScoreCard.tsx",
+      "lineRange": [
+        9,
+        9
+      ]
+    },
+    {
+      "id": "file:src/components/TeamFoulTracker.tsx",
+      "type": "file",
+      "name": "TeamFoulTracker.tsx",
+      "summary": "interface TeamFoulTrackerProps {",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/TeamFoulTracker.tsx"
+    },
+    {
+      "id": "function:src/components/TeamFoulTracker.tsx:TeamFoulTracker",
+      "type": "function",
+      "name": "TeamFoulTracker",
+      "summary": "function TeamFoulTracker in src/components/TeamFoulTracker.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/components/TeamFoulTracker.tsx",
+      "lineRange": [
+        11,
+        11
+      ]
+    },
+    {
+      "id": "file:src/main.tsx",
+      "type": "file",
+      "name": "main.tsx",
+      "summary": "registerBasketballWebMCP()",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "simple",
+      "filePath": "src/main.tsx"
+    },
+    {
+      "id": "file:src/mcp-app.ts",
+      "type": "file",
+      "name": "mcp-app.ts",
+      "summary": "content: Array<{",
+      "tags": [
+        "app"
+      ],
+      "complexity": "complex",
+      "filePath": "src/mcp-app.ts"
+    },
+    {
+      "id": "function:src/mcp-app.ts:getBasketballGameCardTool",
+      "type": "function",
+      "name": "getBasketballGameCardTool",
+      "summary": "function getBasketballGameCardTool in src/mcp-app.ts",
+      "tags": [
+        "app",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/mcp-app.ts",
+      "lineRange": [
+        31,
+        31
+      ]
+    },
+    {
+      "id": "function:src/mcp-app.ts:registerBasketballWebMCP",
+      "type": "function",
+      "name": "registerBasketballWebMCP",
+      "summary": "function registerBasketballWebMCP in src/mcp-app.ts",
+      "tags": [
+        "app",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/mcp-app.ts",
+      "lineRange": [
+        112,
+        112
+      ]
+    },
+    {
+      "id": "class:src/mcp-app.ts:McpToolResponse",
+      "type": "class",
+      "name": "McpToolResponse",
+      "summary": "class McpToolResponse in src/mcp-app.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/mcp-app.ts",
+      "lineRange": [
+        11,
+        11
+      ]
+    },
+    {
+      "id": "class:src/mcp-app.ts:ModelContextTool",
+      "type": "class",
+      "name": "ModelContextTool",
+      "summary": "class ModelContextTool in src/mcp-app.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/mcp-app.ts",
+      "lineRange": [
+        80,
+        80
+      ]
+    },
+    {
+      "id": "class:src/mcp-app.ts:ModelContextRegistry",
+      "type": "class",
+      "name": "ModelContextRegistry",
+      "summary": "class ModelContextRegistry in src/mcp-app.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/mcp-app.ts",
+      "lineRange": [
+        91,
+        91
+      ]
+    },
+    {
+      "id": "file:src/services/basketApi.ts",
+      "type": "file",
+      "name": "basketApi.ts",
+      "summary": "BasketMatchDetail,",
+      "tags": [
+        "service"
+      ],
+      "complexity": "moderate",
+      "filePath": "src/services/basketApi.ts"
+    },
+    {
+      "id": "function:src/services/basketApi.ts:fetchBasketMatch",
+      "type": "function",
+      "name": "fetchBasketMatch",
+      "summary": "function fetchBasketMatch in src/services/basketApi.ts",
+      "tags": [
+        "service",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/services/basketApi.ts",
+      "lineRange": [
+        46,
+        46
+      ]
+    },
+    {
+      "id": "function:src/services/basketApi.ts:fetchBasketTeamFixtures",
+      "type": "function",
+      "name": "fetchBasketTeamFixtures",
+      "summary": "function fetchBasketTeamFixtures in src/services/basketApi.ts",
+      "tags": [
+        "service",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/services/basketApi.ts",
+      "lineRange": [
+        141,
+        141
+      ]
+    },
+    {
+      "id": "function:src/services/basketApi.ts:fetchBasketStandings",
+      "type": "function",
+      "name": "fetchBasketStandings",
+      "summary": "function fetchBasketStandings in src/services/basketApi.ts",
+      "tags": [
+        "service",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/services/basketApi.ts",
+      "lineRange": [
+        174,
+        174
+      ]
+    },
+    {
+      "id": "endpoint:src/services/basketApi.ts:taso",
+      "type": "endpoint",
+      "name": "Torneopal/TASO",
+      "summary": "Association REST client",
+      "tags": [
+        "taso",
+        "service"
+      ],
+      "complexity": "moderate",
+      "filePath": "src/services/basketApi.ts"
+    },
+    {
+      "id": "file:src/types/basketball.ts",
+      "type": "file",
+      "name": "basketball.ts",
+      "summary": "quarter: number",
+      "tags": [
+        "app"
+      ],
+      "complexity": "moderate",
+      "filePath": "src/types/basketball.ts"
+    },
+    {
+      "id": "class:src/types/basketball.ts:BasketQuarterScore",
+      "type": "class",
+      "name": "BasketQuarterScore",
+      "summary": "class BasketQuarterScore in src/types/basketball.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/types/basketball.ts",
+      "lineRange": [
+        5,
+        5
+      ]
+    },
+    {
+      "id": "class:src/types/basketball.ts:BasketPlayerLeader",
+      "type": "class",
+      "name": "BasketPlayerLeader",
+      "summary": "class BasketPlayerLeader in src/types/basketball.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/types/basketball.ts",
+      "lineRange": [
+        11,
+        11
+      ]
+    },
+    {
+      "id": "class:src/types/basketball.ts:BasketMatchDetail",
+      "type": "class",
+      "name": "BasketMatchDetail",
+      "summary": "class BasketMatchDetail in src/types/basketball.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/types/basketball.ts",
+      "lineRange": [
+        20,
+        20
+      ]
+    },
+    {
+      "id": "class:src/types/basketball.ts:BasketTeamFixture",
+      "type": "class",
+      "name": "BasketTeamFixture",
+      "summary": "class BasketTeamFixture in src/types/basketball.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/types/basketball.ts",
+      "lineRange": [
+        50,
+        50
+      ]
+    },
+    {
+      "id": "class:src/types/basketball.ts:BasketStandingRow",
+      "type": "class",
+      "name": "BasketStandingRow",
+      "summary": "class BasketStandingRow in src/types/basketball.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/types/basketball.ts",
+      "lineRange": [
+        65,
+        65
+      ]
+    },
+    {
+      "id": "class:src/types/basketball.ts:CustomBasketTeam",
+      "type": "class",
+      "name": "CustomBasketTeam",
+      "summary": "class CustomBasketTeam in src/types/basketball.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/types/basketball.ts",
+      "lineRange": [
+        79,
+        79
+      ]
+    },
+    {
+      "id": "endpoint:src/types/basketball.ts:taso",
+      "type": "endpoint",
+      "name": "Torneopal/TASO",
+      "summary": "Association REST client",
+      "tags": [
+        "taso",
+        "app"
+      ],
+      "complexity": "moderate",
+      "filePath": "src/types/basketball.ts"
+    },
+    {
+      "id": "file:src/types/contracts.ts",
+      "type": "file",
+      "name": "contracts.ts",
+      "summary": "sport: SupportedSport",
+      "tags": [
+        "contract"
+      ],
+      "complexity": "moderate",
+      "filePath": "src/types/contracts.ts"
+    },
+    {
+      "id": "function:src/types/contracts.ts:parseIncomingCrossRepoQuery",
+      "type": "function",
+      "name": "parseIncomingCrossRepoQuery",
+      "summary": "function parseIncomingCrossRepoQuery in src/types/contracts.ts",
+      "tags": [
+        "contract",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/types/contracts.ts",
+      "lineRange": [
+        50,
+        50
+      ]
+    },
+    {
+      "id": "function:src/types/contracts.ts:buildBasketballStatsContract",
+      "type": "function",
+      "name": "buildBasketballStatsContract",
+      "summary": "function buildBasketballStatsContract in src/types/contracts.ts",
+      "tags": [
+        "contract",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/types/contracts.ts",
+      "lineRange": [
+        59,
+        59
+      ]
+    },
+    {
+      "id": "class:src/types/contracts.ts:SportStatsContract",
+      "type": "class",
+      "name": "SportStatsContract",
+      "summary": "class SportStatsContract in src/types/contracts.ts",
+      "tags": [
+        "contract",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/types/contracts.ts",
+      "lineRange": [
+        10,
+        10
+      ]
+    },
+    {
+      "id": "class:src/types/contracts.ts:CrossRepoQueryContract",
+      "type": "class",
+      "name": "CrossRepoQueryContract",
+      "summary": "class CrossRepoQueryContract in src/types/contracts.ts",
+      "tags": [
+        "contract",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/types/contracts.ts",
+      "lineRange": [
+        43,
+        43
+      ]
+    },
+    {
+      "id": "class:src/types/contracts.ts:SupportedSport",
+      "type": "class",
+      "name": "SupportedSport",
+      "summary": "class SupportedSport in src/types/contracts.ts",
+      "tags": [
+        "contract",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/types/contracts.ts",
+      "lineRange": [
+        8,
+        8
+      ]
+    },
+    {
+      "id": "function:src/types/contracts.ts:CONTRACT_VERSION",
+      "type": "function",
+      "name": "CONTRACT_VERSION",
+      "summary": "function CONTRACT_VERSION in src/types/contracts.ts",
+      "tags": [
+        "contract",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/types/contracts.ts",
+      "lineRange": [
+        6,
+        6
+      ]
+    },
+    {
+      "id": "file:src/vite-env.d.ts",
+      "type": "file",
+      "name": "vite-env.d.ts",
+      "summary": "declare const __APP_VERSION__: string;",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "src/vite-env.d.ts"
+    },
+    {
+      "id": "file:tailwind.config.js",
+      "type": "file",
+      "name": "tailwind.config.js",
+      "summary": "content: [",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "tailwind.config.js"
+    },
+    {
+      "id": "file:tests/basketInvariants.test.mjs",
+      "type": "file",
+      "name": "basketInvariants.test.mjs",
+      "summary": "describe('Basketball Domain Invariants', () => {",
+      "tags": [
+        "app"
+      ],
+      "complexity": "moderate",
+      "filePath": "tests/basketInvariants.test.mjs"
+    },
+    {
+      "id": "config:tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "summary": "Config tsconfig.json",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "tsconfig.json"
+    },
+    {
+      "id": "file:vite.config.ts",
+      "type": "file",
+      "name": "vite.config.ts",
+      "summary": "const commitHash = (() => {",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "vite.config.ts"
+    },
+    {
+      "id": "concept:the-rule",
+      "type": "concept",
+      "name": "The Rule (AGENTS.md)",
+      "summary": "Supreme house rule, <1500 words",
+      "tags": [
+        "governance"
+      ],
+      "complexity": "simple",
+      "filePath": "AGENTS.md"
+    },
+    {
+      "id": "concept:chapter-of-neighbors",
+      "type": "concept",
+      "name": "Chapter of Neighbors",
+      "summary": "Visit-gate that freezes contracts and peer AGENTS.md",
+      "tags": [
+        "governance",
+        "treaty"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "schema:src/types/contracts.ts",
+      "type": "schema",
+      "name": "Federation contracts",
+      "summary": "Canonical v1.0.0 treaty adapters",
+      "tags": [
+        "treaty"
+      ],
+      "complexity": "moderate",
+      "filePath": "src/types/contracts.ts"
+    }
+  ],
+  "edges": [
+    {
+      "source": "pipeline:.github/workflows/cd.yml",
+      "target": "document:AGENTS.md",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "pipeline:.github/workflows/monastic-visit.yml",
+      "target": "document:AGENTS.md",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "file:scripts/check-neighbors.mjs",
+      "target": "endpoint:scripts/check-neighbors.mjs:taso",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:scripts/understand.mjs",
+      "target": "endpoint:scripts/understand.mjs:taso",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/App.tsx",
+      "target": "function:src/App.tsx:App",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/App.tsx",
+      "target": "file:src/components/Header.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/App.tsx",
+      "target": "file:src/components/QuarterScoreCard.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/App.tsx",
+      "target": "file:src/components/TeamFoulTracker.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/App.tsx",
+      "target": "file:src/components/BasketScorersTable.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/App.tsx",
+      "target": "file:src/components/BasketStandingsTable.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/App.tsx",
+      "target": "file:src/components/BasketScheduleView.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/App.tsx",
+      "target": "file:src/components/BasketTeamOnboarding.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/App.tsx",
+      "target": "file:src/components/BasketPreviewExport.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/App.tsx",
+      "target": "file:src/services/basketApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/App.tsx",
+      "target": "file:src/types/basketball.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/App.tsx",
+      "target": "file:src/types/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/components/BasketPreviewExport.tsx",
+      "target": "function:src/components/BasketPreviewExport.tsx:BasketPreviewExport",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/components/BasketPreviewExport.tsx",
+      "target": "file:src/types/basketball.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/components/BasketScheduleView.tsx",
+      "target": "function:src/components/BasketScheduleView.tsx:BasketScheduleView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/components/BasketScheduleView.tsx",
+      "target": "file:src/types/basketball.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/components/BasketScorersTable.tsx",
+      "target": "function:src/components/BasketScorersTable.tsx:BasketScorersTable",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/components/BasketScorersTable.tsx",
+      "target": "file:src/types/basketball.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/components/BasketStandingsTable.tsx",
+      "target": "function:src/components/BasketStandingsTable.tsx:BasketStandingsTable",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/components/BasketStandingsTable.tsx",
+      "target": "file:src/types/basketball.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/components/BasketTeamOnboarding.tsx",
+      "target": "function:src/components/BasketTeamOnboarding.tsx:BasketTeamOnboarding",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/components/BasketTeamOnboarding.tsx",
+      "target": "file:src/types/basketball.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/components/Header.tsx",
+      "target": "function:src/components/Header.tsx:Header",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/components/Header.tsx",
+      "target": "endpoint:src/components/Header.tsx:taso",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/components/QuarterScoreCard.tsx",
+      "target": "function:src/components/QuarterScoreCard.tsx:QuarterScoreCard",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/components/QuarterScoreCard.tsx",
+      "target": "file:src/types/basketball.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/components/TeamFoulTracker.tsx",
+      "target": "function:src/components/TeamFoulTracker.tsx:TeamFoulTracker",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/main.tsx",
+      "target": "file:src/App.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/main.tsx",
+      "target": "file:src/mcp-app.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/mcp-app.ts",
+      "target": "function:src/mcp-app.ts:getBasketballGameCardTool",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/mcp-app.ts",
+      "target": "function:src/mcp-app.ts:registerBasketballWebMCP",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/mcp-app.ts",
+      "target": "class:src/mcp-app.ts:McpToolResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/mcp-app.ts",
+      "target": "class:src/mcp-app.ts:ModelContextTool",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/mcp-app.ts",
+      "target": "class:src/mcp-app.ts:ModelContextRegistry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/mcp-app.ts",
+      "target": "file:src/services/basketApi.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/mcp-app.ts",
+      "target": "file:src/types/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/mcp-app.ts",
+      "target": "file:src/types/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/services/basketApi.ts",
+      "target": "function:src/services/basketApi.ts:fetchBasketMatch",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/services/basketApi.ts",
+      "target": "function:src/services/basketApi.ts:fetchBasketTeamFixtures",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/services/basketApi.ts",
+      "target": "function:src/services/basketApi.ts:fetchBasketStandings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/services/basketApi.ts",
+      "target": "file:src/types/basketball.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/services/basketApi.ts",
+      "target": "endpoint:src/services/basketApi.ts:taso",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/types/basketball.ts",
+      "target": "class:src/types/basketball.ts:BasketQuarterScore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/types/basketball.ts",
+      "target": "class:src/types/basketball.ts:BasketPlayerLeader",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/types/basketball.ts",
+      "target": "class:src/types/basketball.ts:BasketMatchDetail",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/types/basketball.ts",
+      "target": "class:src/types/basketball.ts:BasketTeamFixture",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/types/basketball.ts",
+      "target": "class:src/types/basketball.ts:BasketStandingRow",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/types/basketball.ts",
+      "target": "class:src/types/basketball.ts:CustomBasketTeam",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/types/basketball.ts",
+      "target": "endpoint:src/types/basketball.ts:taso",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/types/contracts.ts",
+      "target": "function:src/types/contracts.ts:parseIncomingCrossRepoQuery",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/types/contracts.ts",
+      "target": "function:src/types/contracts.ts:buildBasketballStatsContract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/types/contracts.ts",
+      "target": "class:src/types/contracts.ts:SportStatsContract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/types/contracts.ts",
+      "target": "class:src/types/contracts.ts:CrossRepoQueryContract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/types/contracts.ts",
+      "target": "class:src/types/contracts.ts:SupportedSport",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/types/contracts.ts",
+      "target": "function:src/types/contracts.ts:CONTRACT_VERSION",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "document:AGENTS.md",
+      "target": "concept:the-rule",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/types/contracts.ts",
+      "target": "schema:src/types/contracts.ts",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 1
+    }
+  ],
+  "layers": [
+    {
+      "id": "ci",
+      "name": "Ci",
+      "description": "ci layer",
+      "nodeIds": [
+        "pipeline:.github/workflows/cd.yml",
+        "pipeline:.github/workflows/monastic-visit.yml"
+      ]
+    },
+    {
+      "id": "docs",
+      "name": "Docs",
+      "description": "docs layer",
+      "nodeIds": [
+        "document:AGENTS.md",
+        "document:ROLL.md",
+        "document:docs/plans/HOUSE_TEST_SPEC.md"
+      ]
+    },
+    {
+      "id": "config",
+      "name": "Config",
+      "description": "config layer",
+      "nodeIds": [
+        "file:eslint.config.js",
+        "config:federation.neighbors.json",
+        "config:lefthook.yml",
+        "config:package.json",
+        "config:tsconfig.json",
+        "file:vite.config.ts"
+      ]
+    },
+    {
+      "id": "app",
+      "name": "App",
+      "description": "app layer",
+      "nodeIds": [
+        "file:postcss.config.js",
+        "file:src/mcp-app.ts",
+        "function:src/mcp-app.ts:getBasketballGameCardTool",
+        "function:src/mcp-app.ts:registerBasketballWebMCP",
+        "class:src/mcp-app.ts:McpToolResponse",
+        "class:src/mcp-app.ts:ModelContextTool",
+        "class:src/mcp-app.ts:ModelContextRegistry",
+        "file:src/types/basketball.ts",
+        "class:src/types/basketball.ts:BasketQuarterScore",
+        "class:src/types/basketball.ts:BasketPlayerLeader",
+        "class:src/types/basketball.ts:BasketMatchDetail",
+        "class:src/types/basketball.ts:BasketTeamFixture",
+        "class:src/types/basketball.ts:BasketStandingRow",
+        "class:src/types/basketball.ts:CustomBasketTeam",
+        "file:src/vite-env.d.ts",
+        "file:tailwind.config.js",
+        "file:tests/basketInvariants.test.mjs"
+      ]
+    },
+    {
+      "id": "tooling",
+      "name": "Tooling",
+      "description": "tooling layer",
+      "nodeIds": [
+        "file:scripts/check-neighbors.mjs",
+        "file:scripts/git-guard.mjs",
+        "file:scripts/monastery-visitor.mjs",
+        "file:scripts/understand.mjs"
+      ]
+    },
+    {
+      "id": "ui",
+      "name": "Ui",
+      "description": "ui layer",
+      "nodeIds": [
+        "file:src/App.tsx",
+        "function:src/App.tsx:App",
+        "file:src/components/BasketPreviewExport.tsx",
+        "function:src/components/BasketPreviewExport.tsx:BasketPreviewExport",
+        "file:src/components/BasketScheduleView.tsx",
+        "function:src/components/BasketScheduleView.tsx:BasketScheduleView",
+        "file:src/components/BasketScorersTable.tsx",
+        "function:src/components/BasketScorersTable.tsx:BasketScorersTable",
+        "file:src/components/BasketStandingsTable.tsx",
+        "function:src/components/BasketStandingsTable.tsx:BasketStandingsTable",
+        "file:src/components/BasketTeamOnboarding.tsx",
+        "function:src/components/BasketTeamOnboarding.tsx:BasketTeamOnboarding",
+        "file:src/components/Header.tsx",
+        "function:src/components/Header.tsx:Header",
+        "file:src/components/QuarterScoreCard.tsx",
+        "function:src/components/QuarterScoreCard.tsx:QuarterScoreCard",
+        "file:src/components/TeamFoulTracker.tsx",
+        "function:src/components/TeamFoulTracker.tsx:TeamFoulTracker",
+        "file:src/main.tsx"
+      ]
+    },
+    {
+      "id": "service",
+      "name": "Service",
+      "description": "service layer",
+      "nodeIds": [
+        "file:src/services/basketApi.ts",
+        "function:src/services/basketApi.ts:fetchBasketMatch",
+        "function:src/services/basketApi.ts:fetchBasketTeamFixtures",
+        "function:src/services/basketApi.ts:fetchBasketStandings"
+      ]
+    },
+    {
+      "id": "contract",
+      "name": "Contract",
+      "description": "contract layer",
+      "nodeIds": [
+        "file:src/types/contracts.ts",
+        "function:src/types/contracts.ts:parseIncomingCrossRepoQuery",
+        "function:src/types/contracts.ts:buildBasketballStatsContract",
+        "class:src/types/contracts.ts:SportStatsContract",
+        "class:src/types/contracts.ts:CrossRepoQueryContract",
+        "class:src/types/contracts.ts:SupportedSport",
+        "function:src/types/contracts.ts:CONTRACT_VERSION"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "The Rule",
+      "description": "Read AGENTS.md before changing code.",
+      "nodeIds": [
+        "document:AGENTS.md",
+        "concept:the-rule"
+      ]
+    },
+    {
+      "order": 2,
+      "title": "Treaty",
+      "description": "Contract fields this house must keep.",
+      "nodeIds": [
+        "schema:src/types/contracts.ts"
+      ]
+    },
+    {
+      "order": 3,
+      "title": "Services",
+      "description": "API clients and TASO cache policy.",
+      "nodeIds": [
+        "endpoint:scripts/check-neighbors.mjs:taso",
+        "endpoint:scripts/understand.mjs:taso",
+        "endpoint:src/components/Header.tsx:taso",
+        "file:src/services/basketApi.ts",
+        "function:src/services/basketApi.ts:fetchBasketMatch",
+        "function:src/services/basketApi.ts:fetchBasketTeamFixtures",
+        "function:src/services/basketApi.ts:fetchBasketStandings",
+        "endpoint:src/services/basketApi.ts:taso"
+      ]
+    },
+    {
+      "order": 4,
+      "title": "UI",
+      "description": "Pages the family actually opens.",
+      "nodeIds": [
+        "file:src/App.tsx",
+        "file:src/components/BasketPreviewExport.tsx",
+        "file:src/components/BasketScheduleView.tsx",
+        "file:src/components/BasketScorersTable.tsx",
+        "file:src/components/BasketStandingsTable.tsx",
+        "file:src/components/BasketTeamOnboarding.tsx",
+        "file:src/components/Header.tsx",
+        "file:src/components/QuarterScoreCard.tsx"
+      ]
+    },
+    {
+      "order": 5,
+      "title": "Visit gate",
+      "description": "npm run visit + check-neighbors.mjs",
+      "nodeIds": [
+        "file:scripts/check-neighbors.mjs",
+        "endpoint:scripts/check-neighbors.mjs:taso"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "tool": "federation-understand",
+  "compatibleWith": "Egonex-AI/Understand-Anything 1.0.0",
+  "generatedAt": "2026-09-12T10:44:07.627Z",
+  "repo": "basketball-stats",
+  "commit": "fcf6aa7d57a1cdad036560951c02d7ca0d485d8a",
+  "nodeCount": 70,
+  "edgeCount": 61
+}

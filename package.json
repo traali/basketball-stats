@@ -13,7 +13,8 @@
     "test": "node --test tests/basketInvariants.test.mjs",
     "check": "npm run typecheck && npm run lint && npm run test",
     "visit": "node scripts/monastery-visitor.mjs",
-    "check:neighbors": "node scripts/check-neighbors.mjs"
+    "check:neighbors": "node scripts/check-neighbors.mjs",
+    "understand": "node scripts/understand.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^0.1.0",
