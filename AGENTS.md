@@ -30,3 +30,7 @@ Before any push, run:
 npm run visit
 ```
 Ensures 0 ESLint errors, clean production bundle, and 100% canonical contract compatibility.
+
+## Neighbor check
+`npm run visit` includes `scripts/check-neighbors.mjs`: peer AGENTS.md + canonical contract fields + 5-point plans. Do not drop a required contract field without a major version.
+
