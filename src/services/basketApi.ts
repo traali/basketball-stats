@@ -12,6 +12,7 @@ import type {
 } from '../types/basketball'
 
 const API_BASE = 'https://koripallo-api.torneopal.net/taso/rest'
+const TASO_PROXY = 'https://taso-proxy.sakkoja.workers.dev/basket'
 const BASKET_KEY = 'df8e84j9xtdz269euy3h'
 
 const reqHeaders = {
@@ -19,14 +20,33 @@ const reqHeaders = {
   Referer: 'https://tulospalvelu.basket.fi/',
 }
 
+async function basketGet(path: string): Promise<any | null> {
+  const urls = [
+    `${TASO_PROXY}/${path}`,
+    `${API_BASE}/${path}`,
+    `${API_BASE}/${path}${path.includes('?') ? '&' : '?'}_cb=${Date.now()}`,
+  ]
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        headers: url.includes('taso-proxy') ? { Accept: 'application/json' } : reqHeaders,
+      })
+      if (!res.ok) continue
+      const text = await res.text()
+      const i = text.indexOf('{')
+      if (i < 0) continue
+      return JSON.parse(text.slice(i))
+    } catch {
+      /* try next */
+    }
+  }
+  return null
+}
+
 export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDetail | null> {
   try {
-    const url = `${API_BASE}/getMatch?match_id=${encodeURIComponent(matchId)}`
-    const res = await fetch(url, { headers: reqHeaders })
-
-    if (!res.ok) return null
-    const data = await res.json()
-    if (data.call?.status !== 'ok' || !data.match) return null
+    const data = await basketGet(`getMatch?match_id=${encodeURIComponent(matchId)}`)
+    if (!data?.match) return null
 
     const m = data.match
 
