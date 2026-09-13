@@ -22,6 +22,11 @@ import { Loader2, Calendar, Award, ShieldAlert, Share2, Trophy, PlusCircle } fro
 
 type TabType = 'match' | 'points' | 'fouls' | 'standings' | 'schedule' | 'onboarding' | 'export'
 
+function getInitialResource(): BasketResource {
+  if (typeof window === 'undefined') return { kind: 'none' }
+  return parseBasketResourceFromLocation(window.location.href)
+}
+
 function getNowInHelsinki() {
   const date = new Date()
   const day = date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Helsinki' })
@@ -68,7 +73,7 @@ export function App() {
   const [match, setMatch] = useState<BasketMatchDetail | null>(null)
   const [fixtures, setFixtures] = useState<BasketTeamFixture[]>([])
   const [standings, setStandings] = useState<BasketStandingRow[]>([])
-  const [currentResource, setCurrentResource] = useState<BasketResource>(() => parseBasketResourceFromLocation(window.location.href))
+  const [currentResource, setCurrentResource] = useState<BasketResource>(() => getInitialResource())
   const [currentMatchId, setCurrentMatchId] = useState(() => (currentResource.kind === 'match' ? currentResource.id : ''))
   const [currentTeamId, setCurrentTeamId] = useState(() => (currentResource.kind === 'team' ? currentResource.id : ''))
   const [, setCurrentPlayerId] = useState(() => (currentResource.kind === 'player' ? currentResource.id : ''))
@@ -78,7 +83,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<TabType>('match')
   const [loading, setLoading] = useState(true)
 
-  const searchParams = new URLSearchParams(window.location.search)
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const query = parseIncomingCrossRepoQuery(searchParams)
   const isEmbed = Boolean(query.embed)
 
@@ -89,6 +94,16 @@ export function App() {
         commit: typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : 'dev',
         buildTime: typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : new Date().toISOString(),
       }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const parsed = parseBasketResourceFromLocation(window.location.href)
+      setCurrentResource(parsed)
+      setCurrentMatchId(parsed.kind === 'match' ? parsed.id : '')
+      setCurrentTeamId(parsed.kind === 'team' ? parsed.id : '')
+      setCurrentPlayerId(parsed.kind === 'player' ? parsed.id : '')
     }
   }, [])
 
@@ -334,27 +349,30 @@ export function App() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              <label className="space-y-1 text-xs text-slate-300">
+              <label htmlFor="manual-match-id" className="space-y-1 text-xs text-slate-300">
                 <span>Ottelu-id</span>
                 <input
+                  id="manual-match-id"
                   value={manualMatchId}
                   onChange={(e) => setManualMatchId(e.target.value)}
                   placeholder="esim. 1012345"
                   className="w-full px-3 py-2 rounded-lg bg-[#0B132B] border border-slate-700 text-slate-100"
                 />
               </label>
-              <label className="space-y-1 text-xs text-slate-300">
+              <label htmlFor="manual-team-id" className="space-y-1 text-xs text-slate-300">
                 <span>Joukkue-id</span>
                 <input
+                  id="manual-team-id"
                   value={manualTeamId}
                   onChange={(e) => setManualTeamId(e.target.value)}
                   placeholder="esim. 20053"
                   className="w-full px-3 py-2 rounded-lg bg-[#0B132B] border border-slate-700 text-slate-100"
                 />
               </label>
-              <label className="space-y-1 text-xs text-slate-300">
+              <label htmlFor="manual-player-id" className="space-y-1 text-xs text-slate-300">
                 <span>Pelaaja-id</span>
                 <input
+                  id="manual-player-id"
                   value={manualPlayerId}
                   onChange={(e) => setManualPlayerId(e.target.value)}
                   placeholder="esim. 9835"
