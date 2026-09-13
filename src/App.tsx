@@ -106,6 +106,14 @@ export function App() {
   }, [currentMatchId, currentTeamId])
 
   const handleSelectMatch = (matchId: string) => {
+    const url = new URL(window.location.href)
+    if (matchId.trim()) {
+      url.searchParams.set('matchId', matchId.trim())
+    } else {
+      url.searchParams.delete('matchId')
+    }
+    const nextSearch = url.searchParams.toString()
+    window.history.replaceState({}, '', `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}`)
     setCurrentMatchId(matchId)
     setActiveTab('match')
   }
@@ -115,6 +123,7 @@ export function App() {
     const url = new URL(window.location.href)
     if (parsedTeamId) {
       url.searchParams.set('team', parsedTeamId)
+      url.searchParams.delete('matchId')
       window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, parsedTeamId)
     } else {
       url.searchParams.delete('team')
@@ -144,6 +153,17 @@ export function App() {
     window.history.replaceState({}, '', `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}`)
     window.localStorage.removeItem(LAST_TEAM_ID_STORAGE_KEY)
     setCurrentTeamId('')
+  }
+
+  const saveManualPlayerId = () => {
+    const url = new URL(window.location.href)
+    if (manualPlayerId.trim()) {
+      url.searchParams.set('playerId', manualPlayerId.trim())
+    } else {
+      url.searchParams.delete('playerId')
+    }
+    const nextSearch = url.searchParams.toString()
+    window.history.replaceState({}, '', `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}`)
   }
 
   return (
@@ -381,7 +401,8 @@ export function App() {
                 onClick={() => {
                   if (manualMatchId.trim()) {
                     clearTeamSelection()
-                    setCurrentMatchId(manualMatchId.trim())
+                    saveManualPlayerId()
+                    handleSelectMatch(manualMatchId.trim())
                   }
                 }}
                 className="h-11 px-4 rounded-xl bg-[#3A506B] text-[#6FFFE9] text-xs font-semibold"
@@ -391,11 +412,20 @@ export function App() {
               <button
                 onClick={() => {
                   const parsed = parseBasketTeamId(manualTeamId)
-                  if (parsed && isTorneopalTeamId(parsed)) handleSelectTeam(parsed)
+                  if (parsed && isTorneopalTeamId(parsed)) {
+                    saveManualPlayerId()
+                    handleSelectTeam(parsed)
+                  }
                 }}
                 className="h-11 px-4 rounded-xl bg-[#3A506B] text-[#6FFFE9] text-xs font-semibold"
               >
                 Avaa joukkue
+              </button>
+              <button
+                onClick={saveManualPlayerId}
+                className="h-11 px-4 rounded-xl bg-[#3A506B] text-[#6FFFE9] text-xs font-semibold"
+              >
+                Tallenna pelaaja-id
               </button>
             </div>
           </div>
