@@ -45,14 +45,29 @@ export interface CrossRepoQueryContract {
   embed?: boolean
   parentOrigin?: string
   targetId?: string
+  matchId?: string
+  teamId?: string
+  playerId?: string
 }
 
 export function parseIncomingCrossRepoQuery(searchParams: URLSearchParams): CrossRepoQueryContract {
+  const matchId =
+    searchParams.get('match') ||
+    searchParams.get('matchId') ||
+    searchParams.get('game') ||
+    searchParams.get('gameId') ||
+    undefined
+  const teamId = searchParams.get('team') || searchParams.get('teamId') || undefined
+  const playerId = searchParams.get('player') || searchParams.get('playerId') || undefined
+
   return {
     theme: searchParams.get('theme') || undefined,
     embed: searchParams.get('embed') === 'true',
     parentOrigin: searchParams.get('parentOrigin') || undefined,
-    targetId: searchParams.get('targetId') || searchParams.get('matchId') || undefined,
+    targetId: searchParams.get('targetId') || matchId || teamId || playerId || undefined,
+    matchId,
+    teamId,
+    playerId,
   }
 }
 

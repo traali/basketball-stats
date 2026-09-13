@@ -73,6 +73,7 @@ export interface BasketTeamFixture {
   time: string
   homeTeam: string
   awayTeam: string
+  status?: string
   score?: string
   isHome: boolean
   isWin?: boolean
