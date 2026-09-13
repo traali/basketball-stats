@@ -57,3 +57,23 @@ export function getTeamIdFromSearch(search: string): string {
   const value = params.get('team') || params.get('teamId') || params.get('team_id') || ''
   return parseBasketTeamId(value)
 }
+
+export function buildSearchWithIds(
+  search: string,
+  updates: { teamId?: string | null; matchId?: string | null; playerId?: string | null },
+): string {
+  const params = new URLSearchParams(search)
+  if (updates.teamId !== undefined) {
+    if (updates.teamId) params.set('team', updates.teamId)
+    else params.delete('team')
+  }
+  if (updates.matchId !== undefined) {
+    if (updates.matchId) params.set('matchId', updates.matchId)
+    else params.delete('matchId')
+  }
+  if (updates.playerId !== undefined) {
+    if (updates.playerId) params.set('playerId', updates.playerId)
+    else params.delete('playerId')
+  }
+  return params.toString()
+}

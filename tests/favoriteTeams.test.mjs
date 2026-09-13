@@ -5,6 +5,7 @@ import {
   isTorneopalTeamId,
   normalizeFavoriteTeams,
   getTeamIdFromSearch,
+  buildSearchWithIds,
 } from '../src/utils/favoriteTeams.ts'
 
 test('parseBasketTeamId extracts numeric id from common formats', () => {
@@ -39,4 +40,9 @@ test('getTeamIdFromSearch reads team id from url params', () => {
   assert.equal(getTeamIdFromSearch('?team=20053'), '20053')
   assert.equal(getTeamIdFromSearch('?team_id=20053'), '20053')
   assert.equal(getTeamIdFromSearch('?teamId=20053'), '20053')
+})
+
+test('buildSearchWithIds updates and clears id params predictably', () => {
+  assert.equal(buildSearchWithIds('?foo=1', { teamId: '20053', matchId: '1011397', playerId: '9835' }), 'foo=1&team=20053&matchId=1011397&playerId=9835')
+  assert.equal(buildSearchWithIds('?team=20053&matchId=1011397', { teamId: null, matchId: '2000000' }), 'matchId=2000000')
 })

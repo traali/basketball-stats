@@ -13,6 +13,7 @@ import type { BasketMatchDetail, BasketTeamFixture, BasketStandingRow } from './
 import { parseIncomingCrossRepoQuery } from './types/contracts'
 import { Loader2, Calendar, Award, ShieldAlert, Share2, Trophy, PlusCircle } from 'lucide-react'
 import {
+  buildSearchWithIds,
   LAST_TEAM_ID_STORAGE_KEY,
   getTeamIdFromSearch,
   isTorneopalTeamId,
@@ -91,7 +92,7 @@ export function App() {
         id = fixturesData[0].matchId
         setCurrentMatchId(id)
       }
-      if (!id && !currentTeamId) {
+      if (!id) {
         id = await fetchBasketHeroMatchId()
         setCurrentMatchId(id)
       }
@@ -107,12 +108,7 @@ export function App() {
 
   const handleSelectMatch = (matchId: string) => {
     const url = new URL(window.location.href)
-    if (matchId.trim()) {
-      url.searchParams.set('matchId', matchId.trim())
-    } else {
-      url.searchParams.delete('matchId')
-    }
-    const nextSearch = url.searchParams.toString()
+    const nextSearch = buildSearchWithIds(url.search, { matchId: matchId.trim() || null })
     window.history.replaceState({}, '', `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}`)
     setCurrentMatchId(matchId)
     setActiveTab('match')
@@ -121,15 +117,15 @@ export function App() {
   const handleSelectTeam = (teamId: string) => {
     const parsedTeamId = parseBasketTeamId(teamId)
     const url = new URL(window.location.href)
+    const nextSearch = buildSearchWithIds(url.search, {
+      teamId: parsedTeamId || null,
+      matchId: null,
+    })
     if (parsedTeamId) {
-      url.searchParams.set('team', parsedTeamId)
-      url.searchParams.delete('matchId')
       window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, parsedTeamId)
     } else {
-      url.searchParams.delete('team')
       window.localStorage.removeItem(LAST_TEAM_ID_STORAGE_KEY)
     }
-    const nextSearch = url.searchParams.toString()
     window.history.replaceState({}, '', `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}`)
     setCurrentMatchId('')
     setCurrentTeamId(parsedTeamId)
@@ -148,21 +144,20 @@ export function App() {
 
   const clearTeamSelection = () => {
     const url = new URL(window.location.href)
-    url.searchParams.delete('team')
-    const nextSearch = url.searchParams.toString()
+    const nextSearch = buildSearchWithIds(url.search, { teamId: null })
     window.history.replaceState({}, '', `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}`)
     window.localStorage.removeItem(LAST_TEAM_ID_STORAGE_KEY)
     setCurrentTeamId('')
   }
 
-  const saveManualPlayerId = () => {
+  const saveManualIdsToUrl = (includeTeamId = true) => {
     const url = new URL(window.location.href)
-    if (manualPlayerId.trim()) {
-      url.searchParams.set('playerId', manualPlayerId.trim())
-    } else {
-      url.searchParams.delete('playerId')
-    }
-    const nextSearch = url.searchParams.toString()
+    const parsedManualTeamId = parseBasketTeamId(manualTeamId)
+    const nextSearch = buildSearchWithIds(url.search, {
+      teamId: includeTeamId ? (parsedManualTeamId || null) : undefined,
+      matchId: manualMatchId.trim() || null,
+      playerId: manualPlayerId.trim() || null,
+    })
     window.history.replaceState({}, '', `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}`)
   }
 
@@ -401,7 +396,7 @@ export function App() {
                 onClick={() => {
                   if (manualMatchId.trim()) {
                     clearTeamSelection()
-                    saveManualPlayerId()
+                    saveManualIdsToUrl(false)
                     handleSelectMatch(manualMatchId.trim())
                   }
                 }}
@@ -413,7 +408,7 @@ export function App() {
                 onClick={() => {
                   const parsed = parseBasketTeamId(manualTeamId)
                   if (parsed && isTorneopalTeamId(parsed)) {
-                    saveManualPlayerId()
+                    saveManualIdsToUrl()
                     handleSelectTeam(parsed)
                   }
                 }}
@@ -422,10 +417,10 @@ export function App() {
                 Avaa joukkue
               </button>
               <button
-                onClick={saveManualPlayerId}
+                onClick={saveManualIdsToUrl}
                 className="h-11 px-4 rounded-xl bg-[#3A506B] text-[#6FFFE9] text-xs font-semibold"
               >
-                Tallenna pelaaja-id
+                Tallenna id:t
               </button>
             </div>
           </div>
