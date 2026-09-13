@@ -74,6 +74,23 @@ function writeLastTeamId(teamId: string) {
   }
 }
 
+function syncTeamSelectionInUrl(teamId: string) {
+  if (typeof window === 'undefined' || !teamId) return
+  const url = new URL(window.location.href)
+  url.searchParams.set('team', teamId)
+  url.searchParams.delete('teamId')
+  url.searchParams.delete('team_id')
+  url.searchParams.delete('match')
+  url.searchParams.delete('matchId')
+  url.searchParams.delete('match_id')
+  url.searchParams.delete('player')
+  url.searchParams.delete('playerId')
+  url.searchParams.delete('player_id')
+  const queryString = url.searchParams.toString()
+  const nextUrl = `${url.pathname}${queryString ? `?${queryString}` : ''}${url.hash || ''}`
+  window.history.pushState({}, '', nextUrl)
+}
+
 function getInitialResource(): BasketResource {
   if (typeof window === 'undefined') return { kind: 'none' }
   const parsed = parseBasketResourceFromLocation(window.location.href)
@@ -159,6 +176,7 @@ export function App() {
       if (parsed.kind === 'none') {
         const lastTeamId = readLastTeamId()
         if (lastTeamId) {
+          syncTeamSelectionInUrl(lastTeamId)
           setCurrentResource({ kind: 'team', id: lastTeamId })
           setCurrentMatchId('')
           setCurrentTeamId(lastTeamId)
@@ -272,21 +290,7 @@ export function App() {
   const handleSelectTeam = (teamId: string, teamName?: string) => {
     const nextTeamId = teamId.trim()
     if (!nextTeamId) return
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href)
-      url.searchParams.set('team', nextTeamId)
-      url.searchParams.delete('teamId')
-      url.searchParams.delete('team_id')
-      url.searchParams.delete('match')
-      url.searchParams.delete('matchId')
-      url.searchParams.delete('match_id')
-      url.searchParams.delete('player')
-      url.searchParams.delete('playerId')
-      url.searchParams.delete('player_id')
-      const queryString = url.searchParams.toString()
-      const nextUrl = `${url.pathname}${queryString ? `?${queryString}` : ''}${url.hash || ''}`
-      window.history.pushState({}, '', nextUrl)
-    }
+    syncTeamSelectionInUrl(nextTeamId)
     if (isNumericTeamId(nextTeamId)) {
       writeLastTeamId(nextTeamId)
       const resolvedName = teamName?.trim() || `Joukkue ${nextTeamId}`
@@ -396,6 +400,7 @@ export function App() {
                 <button
                   key={team.id}
                   type="button"
+                  aria-pressed={team.id === currentTeamId}
                   onClick={() => handleSelectTeam(team.id, team.name)}
                   className={`h-11 px-4 rounded-full border text-sm font-semibold transition-colors ${
                     team.id === currentTeamId
