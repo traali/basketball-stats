@@ -111,11 +111,11 @@ export function parseBasketResourceFromLocation(href: string): BasketResource {
       if (kind === 'player') return { kind: 'player', id }
     }
 
-    const matchId = firstQueryValue(url.searchParams, ['match', 'matchId', 'game', 'gameId'])
+    const matchId = firstQueryValue(url.searchParams, ['match', 'matchId', 'match_id', 'game', 'gameId', 'game_id'])
     if (matchId) return { kind: 'match', id: matchId }
-    const teamId = firstQueryValue(url.searchParams, ['team', 'teamId'])
+    const teamId = firstQueryValue(url.searchParams, ['team', 'teamId', 'team_id', 'joukkue'])
     if (teamId) return { kind: 'team', id: teamId }
-    const playerId = firstQueryValue(url.searchParams, ['player', 'playerId'])
+    const playerId = firstQueryValue(url.searchParams, ['player', 'playerId', 'player_id'])
     if (playerId) return { kind: 'player', id: playerId }
 
     const targetId = firstQueryValue(url.searchParams, ['targetId'])
@@ -352,12 +352,12 @@ export async function fetchBasketTeamFixtures(teamId: string): Promise<BasketTea
 
 export function fetchBasketStandings(): BasketStandingRow[] {
   const standingsRaw = [
-    { rank: 1, teamId: 'honka-u14', teamName: 'Tapiolan Honka', matchesPlayed: 6, wins: 5, losses: 1, pointsFor: 442, pointsAgainst: 360, form: ['W', 'W', 'W', 'W', 'L'] as ('W' | 'L')[] },
-    { rank: 2, teamId: 'lepy-u14', teamName: 'LePy Oranssi', matchesPlayed: 6, wins: 4, losses: 2, pointsFor: 410, pointsAgainst: 385, form: ['W', 'L', 'W', 'W', 'W'] as ('W' | 'L')[] },
-    { rank: 3, teamId: 'hnmky-u14', teamName: 'HNMKY White', matchesPlayed: 6, wins: 4, losses: 2, pointsFor: 395, pointsAgainst: 372, form: ['L', 'W', 'W', 'L', 'W'] as ('W' | 'L')[] },
-    { rank: 4, teamId: 'topo-u14', teamName: 'ToPo Juniorit', matchesPlayed: 6, wins: 3, losses: 3, pointsFor: 370, pointsAgainst: 388, form: ['W', 'L', 'L', 'W', 'L'] as ('W' | 'L')[] },
-    { rank: 5, teamId: 'pu-u14', teamName: 'PuHu Juniorit', matchesPlayed: 6, wins: 1, losses: 5, pointsFor: 330, pointsAgainst: 420, form: ['L', 'L', 'L', 'L', 'W'] as ('W' | 'L')[] },
-    { rank: 6, teamId: 'wartti-u14', teamName: 'Wartti Basket', matchesPlayed: 6, wins: 1, losses: 5, pointsFor: 315, pointsAgainst: 437, form: ['L', 'L', 'L', 'L', 'L'] as ('W' | 'L')[] },
+    { rank: 1, teamId: '20053', teamName: 'Tapiolan Honka', matchesPlayed: 6, wins: 5, losses: 1, pointsFor: 442, pointsAgainst: 360, form: ['W', 'W', 'W', 'W', 'L'] as ('W' | 'L')[] },
+    { rank: 2, teamId: '20054', teamName: 'LePy Oranssi', matchesPlayed: 6, wins: 4, losses: 2, pointsFor: 410, pointsAgainst: 385, form: ['W', 'L', 'W', 'W', 'W'] as ('W' | 'L')[] },
+    { rank: 3, teamId: '20055', teamName: 'HNMKY White', matchesPlayed: 6, wins: 4, losses: 2, pointsFor: 395, pointsAgainst: 372, form: ['L', 'W', 'W', 'L', 'W'] as ('W' | 'L')[] },
+    { rank: 4, teamId: '20056', teamName: 'ToPo Juniorit', matchesPlayed: 6, wins: 3, losses: 3, pointsFor: 370, pointsAgainst: 388, form: ['W', 'L', 'L', 'W', 'L'] as ('W' | 'L')[] },
+    { rank: 5, teamId: '20057', teamName: 'PuHu Juniorit', matchesPlayed: 6, wins: 1, losses: 5, pointsFor: 330, pointsAgainst: 420, form: ['L', 'L', 'L', 'L', 'W'] as ('W' | 'L')[] },
+    { rank: 6, teamId: '20058', teamName: 'Wartti Basket', matchesPlayed: 6, wins: 1, losses: 5, pointsFor: 315, pointsAgainst: 437, form: ['L', 'L', 'L', 'L', 'L'] as ('W' | 'L')[] },
   ]
 
   return standingsRaw.map(s => ({

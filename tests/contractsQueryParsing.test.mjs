@@ -26,4 +26,12 @@ describe('cross-repo query parsing', () => {
     assert.equal(playerQuery.targetId, '789')
     assert.equal(playerQuery.playerId, '789')
   })
+
+  it('supports snake_case basket identifiers', () => {
+    const query = parseIncomingCrossRepoQuery(new URLSearchParams('team_id=20053&player_id=9835&match_id=1019999'))
+    assert.equal(query.matchId, '1019999')
+    assert.equal(query.teamId, '20053')
+    assert.equal(query.playerId, '9835')
+    assert.equal(query.targetId, '1019999')
+  })
 })

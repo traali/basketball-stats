@@ -21,10 +21,82 @@ import { parseIncomingCrossRepoQuery } from './types/contracts'
 import { Loader2, Calendar, Award, ShieldAlert, Share2, Trophy, PlusCircle } from 'lucide-react'
 
 type TabType = 'match' | 'points' | 'fouls' | 'standings' | 'schedule' | 'onboarding' | 'export'
+type FavoriteTeam = { id: string; name: string }
+
+const FAVORITE_TEAMS_KEY = 'basket_favorite_teams'
+const LAST_TEAM_ID_KEY = 'basket_last_team_id'
+
+function isNumericTeamId(value: string | undefined): value is string {
+  return Boolean(value && /^\d+$/.test(value))
+}
+
+function readFavoriteTeams(): FavoriteTeam[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const stored = localStorage.getItem(FAVORITE_TEAMS_KEY)
+    if (!stored) return []
+    const parsed = JSON.parse(stored)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .map((entry) => {
+        const id = typeof entry?.id === 'number' ? String(entry.id) : typeof entry?.id === 'string' ? entry.id.trim() : ''
+        const name = typeof entry?.name === 'string' ? entry.name.trim() : ''
+        if (!isNumericTeamId(id)) return null
+        return { id, name: name || `Joukkue ${id}` }
+      })
+      .filter((entry): entry is FavoriteTeam => Boolean(entry))
+  } catch {
+    return []
+  }
+}
+
+function saveFavoriteTeams(teams: FavoriteTeam[]) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(FAVORITE_TEAMS_KEY, JSON.stringify(teams))
+  } catch {
+    /* ignore localStorage write errors */
+  }
+}
+
+function readLastTeamId(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  const id = localStorage.getItem(LAST_TEAM_ID_KEY)?.trim()
+  return isNumericTeamId(id) ? id : undefined
+}
+
+function writeLastTeamId(teamId: string) {
+  if (typeof window === 'undefined' || !isNumericTeamId(teamId)) return
+  try {
+    localStorage.setItem(LAST_TEAM_ID_KEY, teamId)
+  } catch {
+    /* ignore localStorage write errors */
+  }
+}
+
+function syncTeamSelectionInUrl(teamId: string) {
+  if (typeof window === 'undefined' || !teamId) return
+  const url = new URL(window.location.href)
+  url.searchParams.set('team', teamId)
+  url.searchParams.delete('teamId')
+  url.searchParams.delete('team_id')
+  url.searchParams.delete('match')
+  url.searchParams.delete('matchId')
+  url.searchParams.delete('match_id')
+  url.searchParams.delete('player')
+  url.searchParams.delete('playerId')
+  url.searchParams.delete('player_id')
+  const queryString = url.searchParams.toString()
+  const nextUrl = `${url.pathname}${queryString ? `?${queryString}` : ''}${url.hash || ''}`
+  window.history.pushState({}, '', nextUrl)
+}
 
 function getInitialResource(): BasketResource {
   if (typeof window === 'undefined') return { kind: 'none' }
-  return parseBasketResourceFromLocation(window.location.href)
+  const parsed = parseBasketResourceFromLocation(window.location.href)
+  if (parsed.kind !== 'none') return parsed
+  const lastTeamId = readLastTeamId()
+  return lastTeamId ? { kind: 'team', id: lastTeamId } : parsed
 }
 
 function getNowInHelsinki() {
@@ -82,6 +154,7 @@ export function App() {
   const [manualPlayerId, setManualPlayerId] = useState('')
   const [activeTab, setActiveTab] = useState<TabType>('match')
   const [loading, setLoading] = useState(true)
+  const [favoriteTeams, setFavoriteTeams] = useState<FavoriteTeam[]>(() => readFavoriteTeams())
 
   const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const query = parseIncomingCrossRepoQuery(searchParams)
@@ -100,6 +173,17 @@ export function App() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const parsed = parseBasketResourceFromLocation(window.location.href)
+      if (parsed.kind === 'none') {
+        const lastTeamId = readLastTeamId()
+        if (lastTeamId) {
+          syncTeamSelectionInUrl(lastTeamId)
+          setCurrentResource({ kind: 'team', id: lastTeamId })
+          setCurrentMatchId('')
+          setCurrentTeamId(lastTeamId)
+          setCurrentPlayerId('')
+          return
+        }
+      }
       setCurrentResource(parsed)
       setCurrentMatchId(parsed.kind === 'match' ? parsed.id : '')
       setCurrentTeamId(parsed.kind === 'team' ? parsed.id : '')
@@ -168,15 +252,57 @@ export function App() {
     loadData()
   }, [currentResource])
 
+  useEffect(() => {
+    if (!isNumericTeamId(currentTeamId)) return
+    writeLastTeamId(currentTeamId)
+  }, [currentTeamId])
+
+  useEffect(() => {
+    if (!match || !isNumericTeamId(currentTeamId)) return
+    let resolvedName = ''
+    if (match.homeTeamId === currentTeamId) resolvedName = match.homeTeamName
+    else if (match.awayTeamId === currentTeamId) resolvedName = match.awayTeamName
+    if (!resolvedName.trim()) return
+
+    setFavoriteTeams((prev) => {
+      const resolved = resolvedName.trim()
+      const existingIndex = prev.findIndex((team) => team.id === currentTeamId)
+      if (existingIndex < 0) {
+        const next = [{ id: currentTeamId, name: resolved }, ...prev]
+        saveFavoriteTeams(next)
+        return next
+      }
+      const existing = prev[existingIndex]
+      if (!existing || existing.name === resolved || existing.name !== `Joukkue ${currentTeamId}`) return prev
+      const next = [...prev]
+      next[existingIndex] = { ...existing, name: resolved }
+      saveFavoriteTeams(next)
+      return next
+    })
+  }, [match, currentTeamId])
+
   const handleSelectMatch = (matchId: string) => {
     setCurrentMatchId(matchId)
     setCurrentResource({ kind: 'match', id: matchId })
     setActiveTab('match')
   }
 
-  const handleSelectTeam = (teamId: string) => {
-    setCurrentTeamId(teamId)
-    setCurrentResource({ kind: 'team', id: teamId })
+  const handleSelectTeam = (teamId: string, teamName?: string) => {
+    const nextTeamId = teamId.trim()
+    if (!nextTeamId) return
+    syncTeamSelectionInUrl(nextTeamId)
+    if (isNumericTeamId(nextTeamId)) {
+      writeLastTeamId(nextTeamId)
+      const resolvedName = teamName?.trim() || `Joukkue ${nextTeamId}`
+      setFavoriteTeams((prev) => {
+        const withoutCurrent = prev.filter((team) => team.id !== nextTeamId)
+        const next = [{ id: nextTeamId, name: resolvedName }, ...withoutCurrent]
+        saveFavoriteTeams(next)
+        return next
+      })
+    }
+    setCurrentTeamId(nextTeamId)
+    setCurrentResource({ kind: 'team', id: nextTeamId })
     setActiveTab('match')
   }
 
@@ -265,6 +391,29 @@ export function App() {
             Jaa
           </button>
         </div>
+
+        {favoriteTeams.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Lempi joukkueet</p>
+            <div className="flex flex-wrap gap-2">
+              {favoriteTeams.map((team) => (
+                <button
+                  key={team.id}
+                  type="button"
+                  aria-pressed={team.id === currentTeamId}
+                  onClick={() => handleSelectTeam(team.id, team.name)}
+                  className={`h-11 px-4 rounded-full border text-sm font-semibold transition-colors ${
+                    team.id === currentTeamId
+                      ? 'bg-[#3A506B] border-[#6FFFE9]/70 text-[#6FFFE9]'
+                      : 'bg-[#1C2541]/60 border-slate-700 text-slate-200 hover:border-slate-500'
+                  }`}
+                >
+                  {team.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
@@ -391,7 +540,7 @@ export function App() {
               </button>
               <button
                 type="button"
-                onClick={() => manualTeamId.trim() && setCurrentResource({ kind: 'team', id: manualTeamId.trim() })}
+                onClick={() => manualTeamId.trim() && handleSelectTeam(manualTeamId.trim())}
                 className="px-3 py-2 rounded-lg bg-[#3A506B] text-[#6FFFE9] text-xs font-semibold"
               >
                 Avaa joukkue

@@ -9,12 +9,7 @@ interface BasketTeamOnboardingProps {
 
 const STORAGE_KEY = 'basket_custom_teams'
 
-const defaultTeams: CustomBasketTeam[] = [
-  { id: 'honka-u14', name: 'Tapiolan Honka U14', category: 'U14 Pojat Aluesarja', addedAt: new Date().toISOString() },
-  { id: 'lepy-u14', name: 'LePy Oranssi U14', category: 'U14 Pojat Aluesarja', addedAt: new Date().toISOString() },
-  { id: 'hnmky-u14', name: 'HNMKY White U14', category: 'U14 Pojat 1-divisioona', addedAt: new Date().toISOString() },
-  { id: 'topo-u14', name: 'ToPo Juniorit', category: 'U14 Pojat SM-sarja', addedAt: new Date().toISOString() },
-]
+const defaultTeams: CustomBasketTeam[] = []
 
 export function BasketTeamOnboarding({ onSelectTeam, currentTeamId }: BasketTeamOnboardingProps) {
   const [teams, setTeams] = useState<CustomBasketTeam[]>(() => {
