@@ -15,9 +15,13 @@ describe('basket URL resource parsing', () => {
 
   it('parses team and player query aliases', () => {
     const team = parseBasketResourceFromLocation('https://basketball-stats-byu.pages.dev/?team=20053')
+    const teamSnake = parseBasketResourceFromLocation('https://basketball-stats-byu.pages.dev/?team_id=20053')
     const player = parseBasketResourceFromLocation('https://basketball-stats-byu.pages.dev/?player=9835')
+    const playerSnake = parseBasketResourceFromLocation('https://basketball-stats-byu.pages.dev/?player_id=9835')
     assert.deepEqual(team, { kind: 'team', id: '20053' })
+    assert.deepEqual(teamSnake, { kind: 'team', id: '20053' })
     assert.deepEqual(player, { kind: 'player', id: '9835' })
+    assert.deepEqual(playerSnake, { kind: 'player', id: '9835' })
   })
 
   it('parses pasted tulospalvelu URL from url= query', () => {
