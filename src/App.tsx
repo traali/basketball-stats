@@ -8,29 +8,73 @@ import { BasketScheduleView } from './components/BasketScheduleView'
 import { BasketTeamOnboarding } from './components/BasketTeamOnboarding'
 import { BasketPreviewExport } from './components/BasketPreviewExport'
 import { BasketRosterCards } from './components/BasketRosterCards'
-import { fetchBasketMatch, fetchBasketTeamFixtures, fetchBasketStandings, fetchBasketHeroMatchId } from './services/basketApi'
+import {
+  fetchBasketMatch,
+  fetchBasketMatchesByPlayer,
+  fetchBasketMatchesByTeam,
+  fetchBasketStandings,
+  parseBasketResourceFromLocation,
+  type BasketResource,
+} from './services/basketApi'
 import type { BasketMatchDetail, BasketTeamFixture, BasketStandingRow } from './types/basketball'
 import { parseIncomingCrossRepoQuery } from './types/contracts'
 import { Loader2, Calendar, Award, ShieldAlert, Share2, Trophy, PlusCircle } from 'lucide-react'
 
 type TabType = 'match' | 'points' | 'fouls' | 'standings' | 'schedule' | 'onboarding' | 'export'
 
-function getInitialMatchId(search: string): string {
-  if (typeof window !== 'undefined') {
-    const pathname = window.location.pathname
-    const matchMatch = pathname.match(/\/match\/([^/]+)/)
-    if (matchMatch) return decodeURIComponent(matchMatch[1])
-  }
-  const q = parseIncomingCrossRepoQuery(new URLSearchParams(search))
-  return q.targetId || ''
+function getNowInHelsinki() {
+  const date = new Date()
+  const day = date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Helsinki' })
+  const time = date.toLocaleTimeString('sv-SE', {
+    timeZone: 'Europe/Helsinki',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+  return { day, time }
+}
+
+function fixtureStatus(f: BasketTeamFixture): string {
+  return String(f.status || '').toLowerCase()
+}
+
+function chooseHeroMatchId(fixtures: BasketTeamFixture[]): string {
+  if (!fixtures.length) return ''
+  const { day: today, time: nowTime } = getNowInHelsinki()
+
+  const liveToday = fixtures.find((f) => f.date === today && fixtureStatus(f) === 'live' && f.matchId)
+  if (liveToday?.matchId) return liveToday.matchId
+
+  const upcoming = fixtures
+    .filter((f) => {
+      const status = fixtureStatus(f)
+      const time = (f.time || '').slice(0, 5)
+      const futureDate = f.date > today
+      const futureToday = f.date === today && (!time || time >= nowTime)
+      return f.matchId && (status === 'fixture' || status === 'upcoming' || futureDate || futureToday)
+    })
+    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
+  if (upcoming[0]?.matchId) return upcoming[0].matchId
+
+  const played = fixtures
+    .filter((f) => f.matchId && (fixtureStatus(f) === 'played' || Boolean(f.score)))
+    .sort((a, b) => `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`))
+  if (played[0]?.matchId) return played[0].matchId
+
+  return fixtures[0]?.matchId || ''
 }
 
 export function App() {
   const [match, setMatch] = useState<BasketMatchDetail | null>(null)
   const [fixtures, setFixtures] = useState<BasketTeamFixture[]>([])
   const [standings, setStandings] = useState<BasketStandingRow[]>([])
-  const [currentMatchId, setCurrentMatchId] = useState(() => getInitialMatchId(window.location.search))
-  const [currentTeamId, setCurrentTeamId] = useState('honka-u14')
+  const [currentResource, setCurrentResource] = useState<BasketResource>(() => parseBasketResourceFromLocation(window.location.href))
+  const [currentMatchId, setCurrentMatchId] = useState(() => (currentResource.kind === 'match' ? currentResource.id : ''))
+  const [currentTeamId, setCurrentTeamId] = useState(() => (currentResource.kind === 'team' ? currentResource.id : ''))
+  const [, setCurrentPlayerId] = useState(() => (currentResource.kind === 'player' ? currentResource.id : ''))
+  const [manualMatchId, setManualMatchId] = useState('')
+  const [manualTeamId, setManualTeamId] = useState('')
+  const [manualPlayerId, setManualPlayerId] = useState('')
   const [activeTab, setActiveTab] = useState<TabType>('match')
   const [loading, setLoading] = useState(true)
 
@@ -50,7 +94,11 @@ export function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      setCurrentMatchId(getInitialMatchId(window.location.search))
+      const parsed = parseBasketResourceFromLocation(window.location.href)
+      setCurrentResource(parsed)
+      setCurrentMatchId(parsed.kind === 'match' ? parsed.id : '')
+      setCurrentTeamId(parsed.kind === 'team' ? parsed.id : '')
+      setCurrentPlayerId(parsed.kind === 'player' ? parsed.id : '')
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
@@ -59,34 +107,61 @@ export function App() {
   useEffect(() => {
     async function loadData() {
       setLoading(true)
-      let id = currentMatchId
-      if (!id) {
-        id = await fetchBasketHeroMatchId()
-        setCurrentMatchId(id)
-      }
-      const [matchData, fixturesData] = await Promise.all([
-        fetchBasketMatch(id),
-        fetchBasketTeamFixtures('etekp2627'),
-      ])
-
-      if (matchData) {
-        setMatch(matchData)
-      }
-      setFixtures(fixturesData)
       setStandings(fetchBasketStandings())
+
+      if (currentResource.kind === 'match') {
+        const matchData = await fetchBasketMatch(currentResource.id)
+        setMatch(matchData)
+        setFixtures([])
+        if (matchData?.homeTeamId) setCurrentTeamId(matchData.homeTeamId)
+        setCurrentMatchId(currentResource.id)
+        setLoading(false)
+        return
+      }
+
+      if (currentResource.kind === 'team') {
+        const fixturesData = await fetchBasketMatchesByTeam(currentResource.id)
+        const heroMatchId = chooseHeroMatchId(fixturesData)
+        const matchData = heroMatchId ? await fetchBasketMatch(heroMatchId) : null
+        setFixtures(fixturesData)
+        setMatch(matchData)
+        setCurrentTeamId(currentResource.id)
+        setCurrentMatchId(heroMatchId)
+        setLoading(false)
+        return
+      }
+
+      if (currentResource.kind === 'player') {
+        const playerFixtures = await fetchBasketMatchesByPlayer(currentResource.id)
+        const heroMatchId = chooseHeroMatchId(playerFixtures)
+        const matchData = heroMatchId ? await fetchBasketMatch(heroMatchId) : null
+        setFixtures(playerFixtures)
+        setMatch(matchData)
+        setCurrentPlayerId(currentResource.id)
+        setCurrentMatchId(heroMatchId)
+        if (matchData?.homeTeamId) setCurrentTeamId(matchData.homeTeamId)
+        setLoading(false)
+        return
+      }
+
+      setMatch(null)
+      setFixtures([])
+      setCurrentMatchId('')
       setLoading(false)
     }
 
     loadData()
-  }, [currentMatchId, currentTeamId])
+  }, [currentResource])
 
   const handleSelectMatch = (matchId: string) => {
     setCurrentMatchId(matchId)
+    setCurrentResource({ kind: 'match', id: matchId })
     setActiveTab('match')
   }
 
   const handleSelectTeam = (teamId: string) => {
     setCurrentTeamId(teamId)
+    setCurrentResource({ kind: 'team', id: teamId })
     setActiveTab('match')
   }
 
@@ -249,6 +324,77 @@ export function App() {
 
             {activeTab === 'export' && <BasketPreviewExport match={match} standings={standings} />}
           </>
+        ) : currentResource.kind === 'none' ? (
+          <div className="p-6 sm:p-8 bg-[#1C2541] rounded-2xl border border-slate-700 space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-white">Aloita oikealla ID:llä</h3>
+              <p className="text-sm text-slate-400">
+                Anna Ottelu-id, Joukkue-id tai Pelaaja-id URL-parametrina tai syöttämällä arvo alle.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="space-y-1 text-xs text-slate-300">
+                <span>Ottelu-id</span>
+                <input
+                  value={manualMatchId}
+                  onChange={(e) => setManualMatchId(e.target.value)}
+                  placeholder="esim. 1012345"
+                  className="w-full px-3 py-2 rounded-lg bg-[#0B132B] border border-slate-700 text-slate-100"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-slate-300">
+                <span>Joukkue-id</span>
+                <input
+                  value={manualTeamId}
+                  onChange={(e) => setManualTeamId(e.target.value)}
+                  placeholder="esim. 20053"
+                  className="w-full px-3 py-2 rounded-lg bg-[#0B132B] border border-slate-700 text-slate-100"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-slate-300">
+                <span>Pelaaja-id</span>
+                <input
+                  value={manualPlayerId}
+                  onChange={(e) => setManualPlayerId(e.target.value)}
+                  placeholder="esim. 9835"
+                  className="w-full px-3 py-2 rounded-lg bg-[#0B132B] border border-slate-700 text-slate-100"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => manualMatchId.trim() && setCurrentResource({ kind: 'match', id: manualMatchId.trim() })}
+                className="px-3 py-2 rounded-lg bg-[#3A506B] text-[#6FFFE9] text-xs font-semibold"
+              >
+                Avaa ottelu
+              </button>
+              <button
+                type="button"
+                onClick={() => manualTeamId.trim() && setCurrentResource({ kind: 'team', id: manualTeamId.trim() })}
+                className="px-3 py-2 rounded-lg bg-[#3A506B] text-[#6FFFE9] text-xs font-semibold"
+              >
+                Avaa joukkue
+              </button>
+              <button
+                type="button"
+                onClick={() => manualPlayerId.trim() && setCurrentResource({ kind: 'player', id: manualPlayerId.trim() })}
+                className="px-3 py-2 rounded-lg bg-[#3A506B] text-[#6FFFE9] text-xs font-semibold"
+              >
+                Avaa pelaaja
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-400 space-y-1">
+              <p>Esimerkit:</p>
+              <p className="font-mono">/match/1012345</p>
+              <p className="font-mono">?teamId=20053</p>
+              <p className="font-mono">?playerId=9835</p>
+              <p className="font-mono">?url=https://tulospalvelu.basket.fi/team/?team_id=20053</p>
+            </div>
+          </div>
         ) : (
           <div className="p-8 text-center bg-[#1C2541] rounded-2xl border border-slate-700">
             <p className="text-slate-400">Ottelutietoja ei löytynyt.</p>

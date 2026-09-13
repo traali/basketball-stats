@@ -54,6 +54,85 @@ function str(v: unknown, fallback = ''): string {
   return String(v)
 }
 
+function toResourceId(value: string | null | undefined): string | undefined {
+  if (!value) return undefined
+  const normalized = value.trim()
+  return normalized ? normalized : undefined
+}
+
+function firstQueryValue(params: URLSearchParams, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = toResourceId(params.get(key))
+    if (value) return value
+  }
+  return undefined
+}
+
+export type BasketResource =
+  | { kind: 'match'; id: string }
+  | { kind: 'team'; id: string }
+  | { kind: 'player'; id: string }
+  | { kind: 'none' }
+
+function parseBasketSourceUrl(rawUrl: string): BasketResource {
+  try {
+    const url = new URL(rawUrl)
+    const fromPath = url.pathname.match(/\/(match|game|team|player)\/([^/?#]+)/i)
+    if (fromPath?.[1] && fromPath[2]) {
+      const kind = fromPath[1].toLowerCase()
+      const id = decodeURIComponent(fromPath[2])
+      if (kind === 'match' || kind === 'game') return { kind: 'match', id }
+      if (kind === 'team') return { kind: 'team', id }
+      if (kind === 'player') return { kind: 'player', id }
+    }
+
+    const matchId = firstQueryValue(url.searchParams, ['match_id', 'matchId', 'match', 'game_id', 'gameId', 'game'])
+    if (matchId) return { kind: 'match', id: matchId }
+    const teamId = firstQueryValue(url.searchParams, ['team_id', 'teamId', 'team', 'joukkue'])
+    if (teamId) return { kind: 'team', id: teamId }
+    const playerId = firstQueryValue(url.searchParams, ['player_id', 'playerId', 'player'])
+    if (playerId) return { kind: 'player', id: playerId }
+  } catch {
+    /* ignore malformed pasted URLs */
+  }
+  return { kind: 'none' }
+}
+
+export function parseBasketResourceFromLocation(href: string): BasketResource {
+  try {
+    const url = new URL(href)
+
+    const pathMatch = url.pathname.match(/\/(match|game|team|player)\/([^/?#]+)/i)
+    if (pathMatch?.[1] && pathMatch[2]) {
+      const kind = pathMatch[1].toLowerCase()
+      const id = decodeURIComponent(pathMatch[2])
+      if (kind === 'match' || kind === 'game') return { kind: 'match', id }
+      if (kind === 'team') return { kind: 'team', id }
+      if (kind === 'player') return { kind: 'player', id }
+    }
+
+    const matchId = firstQueryValue(url.searchParams, ['match', 'matchId', 'game', 'gameId'])
+    if (matchId) return { kind: 'match', id: matchId }
+    const teamId = firstQueryValue(url.searchParams, ['team', 'teamId'])
+    if (teamId) return { kind: 'team', id: teamId }
+    const playerId = firstQueryValue(url.searchParams, ['player', 'playerId'])
+    if (playerId) return { kind: 'player', id: playerId }
+
+    const targetId = firstQueryValue(url.searchParams, ['targetId'])
+    if (targetId) return { kind: 'match', id: targetId }
+
+    const sourceUrl = toResourceId(url.searchParams.get('url'))
+    if (sourceUrl) {
+      const parsed = parseBasketSourceUrl(sourceUrl)
+      if (parsed.kind !== 'none') return parsed
+    }
+  } catch {
+    /* ignore malformed href */
+  }
+
+  return { kind: 'none' }
+}
+
 export function mapLineupPlayer(p: any, teamName: string, teamId?: string): BasketRosterPlayer {
   const first = str(p.first_name)
   const last = str(p.last_name)
@@ -128,24 +207,36 @@ export async function fetchBasketTeamRoster(teamId: string): Promise<BasketRoste
   return t.players.map((p: any) => mapLineupPlayer(p, teamName, str(t.team_id || teamId)))
 }
 
-export async function fetchBasketHeroMatchId(competitionId = 'etekp2627'): Promise<string> {
-  const data = await basketGet(`getMatches?competition_id=${encodeURIComponent(competitionId)}`)
-  const list: any[] = Array.isArray(data?.matches) ? data.matches : []
-  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Helsinki' })
-  const todays = list.filter((m) => str(m.date) === today)
-  const live = todays.filter((m) => String(m.status || '').toLowerCase() === 'live')
-  if (live[0]?.match_id) return str(live[0].match_id)
-  const now = new Date().toLocaleTimeString('sv-SE', { timeZone: 'Europe/Helsinki', hour: '2-digit', minute: '2-digit', hour12: false })
-  const upcoming = todays
-    .filter((m) => String(m.status || '').toLowerCase() === 'fixture')
-    .sort((a, b) => str(a.time).localeCompare(str(b.time)))
-    .filter((m) => str(m.time).slice(0, 5) >= now)
-  if (upcoming[0]?.match_id) return str(upcoming[0].match_id)
-  const played = todays.filter((m) => String(m.status || '').toLowerCase() === 'played')
-  if (played[0]?.match_id) return str(played[0].match_id)
-  return '1011397'
+function mapMatchFixture(m: any, selectedTeamId?: string): BasketTeamFixture {
+  const scoreHome = m.fs_A != null && m.fs_A !== '' ? Number(m.fs_A) : undefined
+  const scoreAway = m.fs_B != null && m.fs_B !== '' ? Number(m.fs_B) : undefined
+  const hasScore = scoreHome !== undefined && scoreAway !== undefined
+  const homeId = str(m.team_A_id)
+  const isHome = selectedTeamId ? homeId === selectedTeamId : true
+  const ownScore = hasScore ? (isHome ? scoreHome : scoreAway) : undefined
+  const oppScore = hasScore ? (isHome ? scoreAway : scoreHome) : undefined
+
+  return {
+    matchId: str(m.match_id),
+    date: str(m.date),
+    time: str(m.time),
+    homeTeam: str(m.team_A_name, 'Koti'),
+    awayTeam: str(m.team_B_name, 'Vieras'),
+    score: hasScore ? `${scoreHome}–${scoreAway}` : undefined,
+    isHome,
+    isWin: ownScore !== undefined && oppScore !== undefined ? ownScore > oppScore : undefined,
+    isLoss: ownScore !== undefined && oppScore !== undefined ? ownScore < oppScore : undefined,
+    venueName: str(m.venue_name, 'Kenttä'),
+    categoryName: str(m.category_name),
+    status: str(m.status),
+  }
 }
 
+async function fetchMatchesByPath(path: string, selectedTeamId?: string): Promise<BasketTeamFixture[]> {
+  const data = await basketGet(path)
+  if (!Array.isArray(data?.matches)) return []
+  return data.matches.slice(0, 40).map((m: any) => mapMatchFixture(m, selectedTeamId))
+}
 
 export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDetail | null> {
   try {
@@ -220,34 +311,43 @@ export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDeta
   }
 }
 
-export async function fetchBasketTeamFixtures(competitionId: string): Promise<BasketTeamFixture[]> {
+export async function fetchBasketMatchesByTeam(teamId: string): Promise<BasketTeamFixture[]> {
+  if (!teamId) return []
   try {
-    const data = await basketGet(`getMatches?competition_id=${encodeURIComponent(competitionId)}`)
-    if (!Array.isArray(data?.matches)) return []
-
-    return data.matches.slice(0, 40).map((m: any) => {
-      const scoreHome = m.fs_A != null && m.fs_A !== '' ? Number(m.fs_A) : undefined
-      const scoreAway = m.fs_B != null && m.fs_B !== '' ? Number(m.fs_B) : undefined
-      const hasScore = scoreHome !== undefined && scoreAway !== undefined
-
-      return {
-        matchId: String(m.match_id),
-        date: String(m.date || ''),
-        time: String(m.time || ''),
-        homeTeam: String(m.team_A_name || 'Koti'),
-        awayTeam: String(m.team_B_name || 'Vieras'),
-        score: hasScore ? `${scoreHome}–${scoreAway}` : undefined,
-        isHome: true,
-        isWin: hasScore ? scoreHome > scoreAway : undefined,
-        isLoss: hasScore ? scoreHome < scoreAway : undefined,
-        venueName: String(m.venue_name || 'Kenttä'),
-        categoryName: String(m.category_name || ''),
-      }
-    })
+    return await fetchMatchesByPath(`getMatches?team_id=${encodeURIComponent(teamId)}`, teamId)
   } catch (err) {
     console.error('[BASKET_FIXTURES_API]', err)
     return []
   }
+}
+
+export async function fetchBasketMatchesByPlayer(playerId: string): Promise<BasketTeamFixture[]> {
+  if (!playerId) return []
+  try {
+    const fromMatches = await fetchMatchesByPath(`getMatches?player_id=${encodeURIComponent(playerId)}`)
+    if (fromMatches.length > 0) return fromMatches
+
+    const playerData = await basketGet(`getPlayer?player_id=${encodeURIComponent(playerId)}`)
+    const candidates = [
+      playerData?.matches,
+      playerData?.player?.matches,
+      playerData?.player?.fixtures,
+      playerData?.fixtures,
+    ]
+    for (const list of candidates) {
+      if (Array.isArray(list)) {
+        return list.slice(0, 40).map((m: any) => mapMatchFixture(m))
+      }
+    }
+    return []
+  } catch (err) {
+    console.error('[BASKET_PLAYER_MATCHES_API]', err)
+    return []
+  }
+}
+
+export async function fetchBasketTeamFixtures(teamId: string): Promise<BasketTeamFixture[]> {
+  return fetchBasketMatchesByTeam(teamId)
 }
 
 export function fetchBasketStandings(): BasketStandingRow[] {

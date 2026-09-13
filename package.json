@@ -10,7 +10,7 @@
     "lint": "eslint src --max-warnings=0",
     "typecheck": "tsc -b --noEmit",
     "check:types": "npm run typecheck",
-    "test": "node --experimental-strip-types --test tests/basketInvariants.test.mjs tests/basketLineups.test.mjs",
+    "test": "node --experimental-strip-types --test tests/basketInvariants.test.mjs tests/basketLineups.test.mjs tests/basketUrlParsing.test.mjs",
     "check": "npm run typecheck && npm run lint && npm run test",
     "visit": "node scripts/monastery-visitor.mjs",
     "check:neighbors": "node scripts/check-neighbors.mjs",
