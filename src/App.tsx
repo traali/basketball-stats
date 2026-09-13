@@ -12,6 +12,15 @@ import { fetchBasketMatch, fetchBasketTeamFixtures, fetchBasketStandings, fetchB
 import type { BasketMatchDetail, BasketTeamFixture, BasketStandingRow } from './types/basketball'
 import { parseIncomingCrossRepoQuery } from './types/contracts'
 import { Loader2, Calendar, Award, ShieldAlert, Share2, Trophy, PlusCircle } from 'lucide-react'
+import {
+  LAST_TEAM_ID_STORAGE_KEY,
+  getTeamIdFromSearch,
+  isTorneopalTeamId,
+  loadFavoriteTeams,
+  parseBasketTeamId,
+  saveFavoriteTeams,
+  type FavoriteTeam,
+} from './utils/favoriteTeams'
 
 type TabType = 'match' | 'points' | 'fouls' | 'standings' | 'schedule' | 'onboarding' | 'export'
 
@@ -25,14 +34,27 @@ function getInitialMatchId(search: string): string {
   return q.targetId || ''
 }
 
+function getInitialTeamId(search: string): string {
+  const fromSearch = getTeamIdFromSearch(search)
+  if (fromSearch) return fromSearch
+  if (typeof window !== 'undefined') {
+    return parseBasketTeamId(window.localStorage.getItem(LAST_TEAM_ID_STORAGE_KEY) || '')
+  }
+  return ''
+}
+
 export function App() {
   const [match, setMatch] = useState<BasketMatchDetail | null>(null)
   const [fixtures, setFixtures] = useState<BasketTeamFixture[]>([])
   const [standings, setStandings] = useState<BasketStandingRow[]>([])
   const [currentMatchId, setCurrentMatchId] = useState(() => getInitialMatchId(window.location.search))
-  const [currentTeamId, setCurrentTeamId] = useState('honka-u14')
+  const [currentTeamId, setCurrentTeamId] = useState(() => getInitialTeamId(window.location.search))
+  const [favoriteTeams, setFavoriteTeams] = useState<FavoriteTeam[]>(() => loadFavoriteTeams())
   const [activeTab, setActiveTab] = useState<TabType>('match')
   const [loading, setLoading] = useState(true)
+  const [manualMatchId, setManualMatchId] = useState('')
+  const [manualTeamId, setManualTeamId] = useState('')
+  const [manualPlayerId, setManualPlayerId] = useState('')
 
   const searchParams = new URLSearchParams(window.location.search)
   const query = parseIncomingCrossRepoQuery(searchParams)
@@ -51,6 +73,7 @@ export function App() {
   useEffect(() => {
     const handlePopState = () => {
       setCurrentMatchId(getInitialMatchId(window.location.search))
+      setCurrentTeamId(getTeamIdFromSearch(window.location.search))
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
@@ -59,19 +82,21 @@ export function App() {
   useEffect(() => {
     async function loadData() {
       setLoading(true)
+      let fixturesData: BasketTeamFixture[] = []
+      if (currentTeamId && isTorneopalTeamId(currentTeamId)) {
+        fixturesData = await fetchBasketTeamFixtures(currentTeamId)
+      }
       let id = currentMatchId
-      if (!id) {
+      if (!id && fixturesData.length) {
+        id = fixturesData[0].matchId
+        setCurrentMatchId(id)
+      }
+      if (!id && !currentTeamId) {
         id = await fetchBasketHeroMatchId()
         setCurrentMatchId(id)
       }
-      const [matchData, fixturesData] = await Promise.all([
-        fetchBasketMatch(id),
-        fetchBasketTeamFixtures('etekp2627'),
-      ])
-
-      if (matchData) {
-        setMatch(matchData)
-      }
+      const matchData = id ? await fetchBasketMatch(id) : null
+      setMatch(matchData)
       setFixtures(fixturesData)
       setStandings(fetchBasketStandings())
       setLoading(false)
@@ -86,9 +111,31 @@ export function App() {
   }
 
   const handleSelectTeam = (teamId: string) => {
-    setCurrentTeamId(teamId)
+    const parsedTeamId = parseBasketTeamId(teamId)
+    const url = new URL(window.location.href)
+    if (parsedTeamId) {
+      url.searchParams.set('team', parsedTeamId)
+      window.localStorage.setItem(LAST_TEAM_ID_STORAGE_KEY, parsedTeamId)
+    } else {
+      url.searchParams.delete('team')
+      window.localStorage.removeItem(LAST_TEAM_ID_STORAGE_KEY)
+    }
+    const nextSearch = url.searchParams.toString()
+    window.history.replaceState({}, '', `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}`)
+    setCurrentMatchId('')
+    setCurrentTeamId(parsedTeamId)
     setActiveTab('match')
   }
+
+  const handleToggleFavorite = (team: FavoriteTeam) => {
+    const next = favoriteTeams.some((f) => f.id === team.id)
+      ? favoriteTeams.filter((f) => f.id !== team.id)
+      : [team, ...favoriteTeams.filter((f) => f.id !== team.id)]
+    setFavoriteTeams(next)
+    saveFavoriteTeams(next)
+  }
+
+  const favoriteTeamWarnings = favoriteTeams.filter((team) => !isTorneopalTeamId(team.id))
 
   return (
     <div className={`min-h-screen bg-[#0B132B] text-slate-100 ${isEmbed ? 'p-2 sm:p-4' : 'pb-16'}`}>
@@ -176,6 +223,29 @@ export function App() {
           </button>
         </div>
 
+        <div className="space-y-2">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Lempi joukkueet</div>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {favoriteTeams.map((team) => (
+              <button
+                key={team.id}
+                onClick={() => handleSelectTeam(team.id)}
+                className={`h-11 px-4 rounded-full border whitespace-nowrap text-sm font-semibold transition-colors ${
+                  team.id === currentTeamId
+                    ? 'bg-[#3A506B] border-[#6FFFE9]/40 text-[#6FFFE9]'
+                    : 'bg-[#1C2541]/60 border-slate-700 text-slate-200 hover:border-slate-500'
+                }`}
+              >
+                {team.name}
+              </button>
+            ))}
+            {!favoriteTeams.length && <span className="text-xs text-slate-500">Ei lempijoukkueita.</span>}
+          </div>
+          {favoriteTeamWarnings.length > 0 && (
+            <p className="text-xs text-amber-400">Lisää Basket.fi team_id</p>
+          )}
+        </div>
+
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
             <Loader2 className="w-8 h-8 animate-spin text-[#5BC0BE]" />
@@ -243,6 +313,8 @@ export function App() {
             {activeTab === 'onboarding' && (
               <BasketTeamOnboarding
                 currentTeamId={currentTeamId}
+                favoriteTeams={favoriteTeams}
+                onToggleFavorite={handleToggleFavorite}
                 onSelectTeam={handleSelectTeam}
               />
             )}
@@ -250,8 +322,70 @@ export function App() {
             {activeTab === 'export' && <BasketPreviewExport match={match} standings={standings} />}
           </>
         ) : (
-          <div className="p-8 text-center bg-[#1C2541] rounded-2xl border border-slate-700">
+          <div className="p-6 sm:p-8 text-center bg-[#1C2541] rounded-2xl border border-slate-700 space-y-5">
             <p className="text-slate-400">Ottelutietoja ei löytynyt.</p>
+            <div className="space-y-2">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Lempi joukkueet</div>
+              <div className="flex items-center justify-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {favoriteTeams.map((team) => (
+                  <button
+                    key={team.id}
+                    onClick={() => handleSelectTeam(team.id)}
+                    className="h-11 px-4 rounded-full border border-slate-700 bg-[#0B132B]/60 whitespace-nowrap text-sm font-semibold text-slate-200"
+                  >
+                    {team.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-left">
+              <div className="space-y-1">
+                <label className="text-[11px] text-slate-400">Ottelu-id</label>
+                <input
+                  value={manualMatchId}
+                  onChange={(e) => setManualMatchId(e.target.value)}
+                  className="h-11 w-full px-3 rounded-xl bg-[#0B132B] border border-slate-700 text-xs text-white font-mono"
+                  placeholder="1011397"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-slate-400">Joukkue-id</label>
+                <input
+                  value={manualTeamId}
+                  onChange={(e) => setManualTeamId(e.target.value)}
+                  className="h-11 w-full px-3 rounded-xl bg-[#0B132B] border border-slate-700 text-xs text-white font-mono"
+                  placeholder="20053"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-slate-400">Pelaaja-id</label>
+                <input
+                  value={manualPlayerId}
+                  onChange={(e) => setManualPlayerId(e.target.value)}
+                  className="h-11 w-full px-3 rounded-xl bg-[#0B132B] border border-slate-700 text-xs text-white font-mono"
+                  placeholder="9835"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                onClick={() => {
+                  if (manualMatchId.trim()) setCurrentMatchId(manualMatchId.trim())
+                }}
+                className="h-11 px-4 rounded-xl bg-[#3A506B] text-[#6FFFE9] text-xs font-semibold"
+              >
+                Avaa ottelu
+              </button>
+              <button
+                onClick={() => {
+                  const parsed = parseBasketTeamId(manualTeamId)
+                  if (parsed) handleSelectTeam(parsed)
+                }}
+                className="h-11 px-4 rounded-xl bg-[#3A506B] text-[#6FFFE9] text-xs font-semibold"
+              >
+                Avaa joukkue
+              </button>
+            </div>
           </div>
         )}
 
