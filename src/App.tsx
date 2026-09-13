@@ -263,7 +263,7 @@ export function App() {
   const handleSelectTeam = (teamId: string, teamName?: string) => {
     const nextTeamId = teamId.trim()
     if (!nextTeamId) return
-    if (typeof window !== 'undefined' && isNumericTeamId(nextTeamId)) {
+    if (typeof window !== 'undefined') {
       const url = new URL(window.location.href)
       url.searchParams.set('team', nextTeamId)
       url.searchParams.delete('teamId')
@@ -275,6 +275,8 @@ export function App() {
       url.searchParams.delete('playerId')
       url.searchParams.delete('player_id')
       window.history.pushState({}, '', `${url.pathname}?${url.searchParams.toString()}`)
+    }
+    if (isNumericTeamId(nextTeamId)) {
       writeLastTeamId(nextTeamId)
       const resolvedName = teamName?.trim() || `Joukkue ${nextTeamId}`
       setFavoriteTeams((prev) => {
