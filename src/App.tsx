@@ -391,7 +391,7 @@ export function App() {
               <button
                 onClick={() => {
                   const parsed = parseBasketTeamId(manualTeamId)
-                  if (parsed) handleSelectTeam(parsed)
+                  if (parsed && isTorneopalTeamId(parsed)) handleSelectTeam(parsed)
                 }}
                 className="h-11 px-4 rounded-xl bg-[#3A506B] text-[#6FFFE9] text-xs font-semibold"
               >
