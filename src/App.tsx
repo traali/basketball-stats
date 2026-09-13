@@ -247,9 +247,17 @@ export function App() {
     if (!resolvedName.trim()) return
 
     setFavoriteTeams((prev) => {
-      if (prev[0]?.id === currentTeamId && prev[0]?.name === resolvedName.trim()) return prev
-      const withoutCurrent = prev.filter((team) => team.id !== currentTeamId)
-      const next = [{ id: currentTeamId, name: resolvedName.trim() }, ...withoutCurrent]
+      const resolved = resolvedName.trim()
+      const existingIndex = prev.findIndex((team) => team.id === currentTeamId)
+      if (existingIndex < 0) {
+        const next = [{ id: currentTeamId, name: resolved }, ...prev]
+        saveFavoriteTeams(next)
+        return next
+      }
+      const existing = prev[existingIndex]
+      if (!existing || existing.name === resolved || existing.name !== `Joukkue ${currentTeamId}`) return prev
+      const next = [...prev]
+      next[existingIndex] = { ...existing, name: resolved }
       saveFavoriteTeams(next)
       return next
     })
