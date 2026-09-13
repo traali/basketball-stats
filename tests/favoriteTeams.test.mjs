@@ -12,6 +12,7 @@ test('parseBasketTeamId extracts numeric id from common formats', () => {
   assert.equal(parseBasketTeamId('https://tulospalvelu.basket.fi/team/20053'), '20053')
   assert.equal(parseBasketTeamId('https://tulospalvelu.basket.fi/?team_id=20053'), '20053')
   assert.equal(parseBasketTeamId('?team=20053'), '20053')
+  assert.equal(parseBasketTeamId('honka-u14'), '')
 })
 
 test('isTorneopalTeamId validates only numeric ids', () => {
@@ -23,6 +24,7 @@ test('isTorneopalTeamId validates only numeric ids', () => {
 test('normalizeFavoriteTeams keeps only unique valid id+name items', () => {
   const normalized = normalizeFavoriteTeams([
     { id: '20053', name: 'Honka' },
+    { id: 'honka-u14', name: 'Legacy slug' },
     { id: '20053', name: 'Duplicate' },
     { id: '', name: 'No id' },
     { id: '20111', name: 'PuHu' },

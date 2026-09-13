@@ -17,7 +17,8 @@ export function parseBasketTeamId(input: string): string {
   const pathMatch = value.match(/\/team\/(\d+)/i)
   if (pathMatch) return pathMatch[1]
   const urlMatch = value.match(/(?:team_id|joukkue|team|id)=([a-zA-Z0-9_-]+)/i)
-  return urlMatch ? urlMatch[1] : value
+  if (!urlMatch) return ''
+  return isTorneopalTeamId(urlMatch[1]) ? urlMatch[1] : ''
 }
 
 export function normalizeFavoriteTeams(value: unknown): FavoriteTeam[] {
@@ -28,7 +29,7 @@ export function normalizeFavoriteTeams(value: unknown): FavoriteTeam[] {
     if (!row || typeof row !== 'object') continue
     const id = String((row as { id?: unknown }).id || '').trim()
     const name = String((row as { name?: unknown }).name || '').trim()
-    if (!id || !name || seen.has(id)) continue
+    if (!id || !name || !isTorneopalTeamId(id) || seen.has(id)) continue
     seen.add(id)
     normalized.push({ id, name })
   }

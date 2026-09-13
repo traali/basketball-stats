@@ -19,7 +19,10 @@ export function BasketTeamOnboarding({ onSelectTeam, favoriteTeams, onToggleFavo
   const handleAddTeam = (e: React.FormEvent) => {
     e.preventDefault()
     const resolvedId = parseBasketTeamId(teamIdInput)
-    if (!teamName.trim() || !resolvedId) return
+    if (!teamName.trim() || !resolvedId) {
+      setInputWarning('Lisää Basket.fi team_id')
+      return
+    }
     if (!isTorneopalTeamId(resolvedId)) {
       setInputWarning('Lisää Basket.fi team_id')
       return

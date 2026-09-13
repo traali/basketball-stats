@@ -73,7 +73,7 @@ export function App() {
   useEffect(() => {
     const handlePopState = () => {
       setCurrentMatchId(getInitialMatchId(window.location.search))
-      setCurrentTeamId(getTeamIdFromSearch(window.location.search))
+      setCurrentTeamId(getInitialTeamId(window.location.search))
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
@@ -136,6 +136,15 @@ export function App() {
   }
 
   const favoriteTeamWarnings = favoriteTeams.filter((team) => !isTorneopalTeamId(team.id))
+
+  const clearTeamSelection = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('team')
+    const nextSearch = url.searchParams.toString()
+    window.history.replaceState({}, '', `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}`)
+    window.localStorage.removeItem(LAST_TEAM_ID_STORAGE_KEY)
+    setCurrentTeamId('')
+  }
 
   return (
     <div className={`min-h-screen bg-[#0B132B] text-slate-100 ${isEmbed ? 'p-2 sm:p-4' : 'pb-16'}`}>
@@ -370,7 +379,10 @@ export function App() {
             <div className="flex flex-wrap justify-center gap-2">
               <button
                 onClick={() => {
-                  if (manualMatchId.trim()) setCurrentMatchId(manualMatchId.trim())
+                  if (manualMatchId.trim()) {
+                    clearTeamSelection()
+                    setCurrentMatchId(manualMatchId.trim())
+                  }
                 }}
                 className="h-11 px-4 rounded-xl bg-[#3A506B] text-[#6FFFE9] text-xs font-semibold"
               >
