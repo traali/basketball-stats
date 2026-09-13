@@ -29,7 +29,15 @@ function Card({ p }: { p: BasketRosterPlayer }) {
   )
 }
 
-function Column({ teamName, roster }: { teamName: string; roster: BasketRosterPlayer[] }) {
+function Column({
+  teamName,
+  roster,
+  emptyHint,
+}: {
+  teamName: string
+  roster: BasketRosterPlayer[]
+  emptyHint: string
+}) {
   const rows = [...roster].sort((a, b) => b.points - a.points || b.assists - a.assists)
   return (
     <div className="bg-[#1C2541] rounded-2xl p-4 border border-slate-700/60">
@@ -41,9 +49,7 @@ function Column({ teamName, roster }: { teamName: string; roster: BasketRosterPl
         <span className="text-[11px] text-slate-400">{rows.length} pelaajaa</span>
       </div>
       {rows.length === 0 ? (
-        <p className="text-xs text-slate-500 py-6 text-center">
-          TASO ei julkaissut kokoonpanoa tälle ottelulle (usein junioreissa: “Ei pelaajia”).
-        </p>
+        <p className="text-xs text-slate-500 py-6 text-center">{emptyHint}</p>
       ) : (
         <div className="grid grid-cols-1 gap-2">
           {rows.map((p) => (
@@ -60,25 +66,52 @@ export function BasketRosterCards({
   awayName,
   homeRoster,
   awayRoster,
+  homeSeasonRoster = [],
+  awaySeasonRoster = [],
   upcoming,
 }: {
   homeName: string
   awayName: string
   homeRoster: BasketRosterPlayer[]
   awayRoster: BasketRosterPlayer[]
+  homeSeasonRoster?: BasketRosterPlayer[]
+  awaySeasonRoster?: BasketRosterPlayer[]
   upcoming?: boolean
 }) {
+  const hasMatchLineup = homeRoster.length > 0 || awayRoster.length > 0
+  const hasSeason = homeSeasonRoster.length > 0 || awaySeasonRoster.length > 0
   return (
     <section className="space-y-3">
       <p className="text-xs text-slate-400">
-        {upcoming
-          ? 'Ennakko — TASOn julkaisema kokoonpano. PTS/AST/PF täyttyvät kun peli on käynnissä tai pelattu.'
-          : 'Kokoonpano — pisteet, syötöt ja virheet tästä ottelusta (kun tilastoija on kirjannut).'}
+        {hasMatchLineup
+          ? upcoming
+            ? 'Ennakko — TASOn julkaisema kokoonpano. PTS/AST/PF täyttyvät kun peli on käynnissä tai pelattu.'
+            : 'Kokoonpano — pisteet, syötöt ja virheet tästä ottelusta (kun tilastoija on kirjannut).'
+          : 'Tässä ottelussa ei ole kokoonpanoa. Junioreissa Basket.fi merkitsee usein “Ei pelaajia” — Pelipäivä silti yhdistää MyClub/Nimenhuuto-ajan TASO-kickoffiin joukkueen nimellä.'}
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Column teamName={homeName} roster={homeRoster} />
-        <Column teamName={awayName} roster={awayRoster} />
+        <Column
+          teamName={homeName}
+          roster={homeRoster}
+          emptyHint="Ei tämän ottelun kokoonpanoa (juniorit / ei tilastoitu)."
+        />
+        <Column
+          teamName={awayName}
+          roster={awayRoster}
+          emptyHint="Ei tämän ottelun kokoonpanoa (juniorit / ei tilastoitu)."
+        />
       </div>
+      {hasSeason && !hasMatchLineup ? (
+        <div className="space-y-2">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Joukkueen kausilista — ei vahvistettu tähän peliin
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Column teamName={homeName} roster={homeSeasonRoster} emptyHint="Ei kausilistaa." />
+            <Column teamName={awayName} roster={awaySeasonRoster} emptyHint="Ei kausilistaa." />
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }

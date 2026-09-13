@@ -192,6 +192,8 @@ export function App() {
                   awayName={match.awayTeamName}
                   homeRoster={match.homeRoster || []}
                   awayRoster={match.awayRoster || []}
+                  homeSeasonRoster={match.homeSeasonRoster || []}
+                  awaySeasonRoster={match.awaySeasonRoster || []}
                   upcoming={!match.isLive && match.scoreHome === 0 && match.scoreAway === 0}
                 />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

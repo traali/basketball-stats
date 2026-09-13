@@ -61,6 +61,9 @@ export interface BasketMatchDetail {
   leaders: BasketPlayerLeader[]
   homeRoster: BasketRosterPlayer[]
   awayRoster: BasketRosterPlayer[]
+  /** Season team list — not this match’s lineup (juniors often have none). */
+  homeSeasonRoster?: BasketRosterPlayer[]
+  awaySeasonRoster?: BasketRosterPlayer[]
   lineupNotice?: string
 }
 

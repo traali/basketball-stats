@@ -171,12 +171,10 @@ export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDeta
     const teamFoulsAway = Number(m.live_fouls_B || 0)
 
     const lineups = extractMatchLineups(m)
-    if (!lineups.home.length && m.team_A_id) {
-      lineups.home = await fetchBasketTeamRoster(String(m.team_A_id))
-    }
-    if (!lineups.away.length && m.team_B_id) {
-      lineups.away = await fetchBasketTeamRoster(String(m.team_B_id))
-    }
+    const homeSeasonRoster =
+      !lineups.home.length && m.team_A_id ? await fetchBasketTeamRoster(String(m.team_A_id)) : []
+    const awaySeasonRoster =
+      !lineups.away.length && m.team_B_id ? await fetchBasketTeamRoster(String(m.team_B_id)) : []
     const leaders: BasketPlayerLeader[] = leadersFromRosters(lineups.home, lineups.away)
 
     const scoreHome = Number(m.fs_A || quarters.reduce((acc, q) => acc + q.scoreHome, 0) || 0)
@@ -212,6 +210,8 @@ export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDeta
       leaders,
       homeRoster: lineups.home,
       awayRoster: lineups.away,
+      homeSeasonRoster,
+      awaySeasonRoster,
       lineupNotice: m.lineup_notice ? String(m.lineup_notice) : undefined,
     }
   } catch (err) {
