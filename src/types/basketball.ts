@@ -17,6 +17,20 @@ export interface BasketPlayerLeader {
   fouls: number
 }
 
+export interface BasketRosterPlayer {
+  playerId: string
+  fullName: string
+  shirtNumber: string
+  teamId?: string
+  teamName: string
+  points: number
+  assists: number
+  fouls: number
+  threePointers: number
+  isCaptain?: boolean
+  birthYear?: string
+}
+
 export interface BasketMatchDetail {
   matchId: string
   matchNumber?: string
@@ -45,6 +59,9 @@ export interface BasketMatchDetail {
   isHomeBonusFreeThrow: boolean
   isAwayBonusFreeThrow: boolean
   leaders: BasketPlayerLeader[]
+  homeRoster: BasketRosterPlayer[]
+  awayRoster: BasketRosterPlayer[]
+  lineupNotice?: string
 }
 
 export interface BasketTeamFixture {
@@ -72,7 +89,7 @@ export interface BasketStandingRow {
   pointsFor: number
   pointsAgainst: number
   diff: number
-  totalPoints: number // Koripalloliitto: 2 pts win, 1 pt loss
+  totalPoints: number
   form: ('W' | 'L')[]
 }
 

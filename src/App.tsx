@@ -7,7 +7,8 @@ import { BasketStandingsTable } from './components/BasketStandingsTable'
 import { BasketScheduleView } from './components/BasketScheduleView'
 import { BasketTeamOnboarding } from './components/BasketTeamOnboarding'
 import { BasketPreviewExport } from './components/BasketPreviewExport'
-import { fetchBasketMatch, fetchBasketTeamFixtures, fetchBasketStandings } from './services/basketApi'
+import { BasketRosterCards } from './components/BasketRosterCards'
+import { fetchBasketMatch, fetchBasketTeamFixtures, fetchBasketStandings, fetchBasketHeroMatchId } from './services/basketApi'
 import type { BasketMatchDetail, BasketTeamFixture, BasketStandingRow } from './types/basketball'
 import { parseIncomingCrossRepoQuery } from './types/contracts'
 import { Loader2, Calendar, Award, ShieldAlert, Share2, Trophy, PlusCircle } from 'lucide-react'
@@ -21,7 +22,7 @@ function getInitialMatchId(search: string): string {
     if (matchMatch) return decodeURIComponent(matchMatch[1])
   }
   const q = parseIncomingCrossRepoQuery(new URLSearchParams(search))
-  return q.targetId || '1011397'
+  return q.targetId || ''
 }
 
 export function App() {
@@ -58,8 +59,13 @@ export function App() {
   useEffect(() => {
     async function loadData() {
       setLoading(true)
+      let id = currentMatchId
+      if (!id) {
+        id = await fetchBasketHeroMatchId()
+        setCurrentMatchId(id)
+      }
       const [matchData, fixturesData] = await Promise.all([
-        fetchBasketMatch(currentMatchId),
+        fetchBasketMatch(id),
         fetchBasketTeamFixtures('etekp2627'),
       ])
 
@@ -180,14 +186,23 @@ export function App() {
             <QuarterScoreCard match={match} />
 
             {activeTab === 'match' && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <TeamFoulTracker
-                  teamFoulsHome={match.teamFoulsHome}
-                  teamFoulsAway={match.teamFoulsAway}
-                  homeTeamName={match.homeTeamName}
-                  awayTeamName={match.awayTeamName}
+              <div className="space-y-6">
+                <BasketRosterCards
+                  homeName={match.homeTeamName}
+                  awayName={match.awayTeamName}
+                  homeRoster={match.homeRoster || []}
+                  awayRoster={match.awayRoster || []}
+                  upcoming={!match.isLive && match.scoreHome === 0 && match.scoreAway === 0}
                 />
-                <BasketScorersTable leaders={match.leaders} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <TeamFoulTracker
+                    teamFoulsHome={match.teamFoulsHome}
+                    teamFoulsAway={match.teamFoulsAway}
+                    homeTeamName={match.homeTeamName}
+                    awayTeamName={match.awayTeamName}
+                  />
+                  <BasketScorersTable leaders={match.leaders} />
+                </div>
               </div>
             )}
 

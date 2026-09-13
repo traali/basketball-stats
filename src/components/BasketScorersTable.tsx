@@ -18,7 +18,10 @@ export const BasketScorersTable: React.FC<BasketScorersTableProps> = ({ leaders 
       </div>
 
       <div className="space-y-2">
-        {leaders.map((leader, idx) => (
+        {leaders.length === 0 ? (
+          <p className="text-xs text-slate-500 py-4 text-center">Ei pelaajakohtaisia pisteitä tässä ottelussa.</p>
+        ) : (
+          leaders.map((leader, idx) => (
           <div
             key={`${leader.playerName}-${leader.teamName}-${leader.shirtNumber}`}
             className="flex items-center justify-between p-3 rounded-xl bg-[#0B132B]/60 border border-slate-800 text-xs"
@@ -46,7 +49,8 @@ export const BasketScorersTable: React.FC<BasketScorersTableProps> = ({ leaders 
               </div>
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
     </div>
   )

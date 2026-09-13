@@ -9,6 +9,7 @@ import type {
   BasketPlayerLeader,
   BasketTeamFixture,
   BasketStandingRow,
+  BasketRosterPlayer,
 } from '../types/basketball'
 
 const API_BASE = 'https://koripallo-api.torneopal.net/taso/rest'
@@ -43,6 +44,109 @@ async function basketGet(path: string): Promise<any | null> {
   return null
 }
 
+function n(v: unknown): number {
+  const x = Number(v)
+  return Number.isFinite(x) ? x : 0
+}
+
+function str(v: unknown, fallback = ''): string {
+  if (v == null) return fallback
+  return String(v)
+}
+
+export function mapLineupPlayer(p: any, teamName: string, teamId?: string): BasketRosterPlayer {
+  const first = str(p.first_name)
+  const last = str(p.last_name)
+  const full = `${first} ${last}`.trim() || str(p.player_name, 'Pelaaja')
+  return {
+    playerId: str(p.player_id),
+    fullName: full,
+    shirtNumber: str(p.shirt_number),
+    teamId: teamId || (p.team_id ? str(p.team_id) : undefined),
+    teamName,
+    points: n(p.points ?? p.player_points ?? p.goals),
+    assists: n(p.assists),
+    fouls: n(p.fouls ?? p.personal_fouls),
+    threePointers: n(p.three_pointers ?? p.threes ?? p['3p']),
+    isCaptain: p.captain === 1 || p.captain === '1' || p.captain === true,
+    birthYear: p.birthyear ? str(p.birthyear) : undefined,
+  }
+}
+
+export function extractMatchLineups(m: any): { home: BasketRosterPlayer[]; away: BasketRosterPlayer[] } {
+  const homeName = str(m.team_A_name, 'Koti')
+  const awayName = str(m.team_B_name, 'Vieras')
+  const homeId = m.team_A_id ? str(m.team_A_id) : undefined
+  const awayId = m.team_B_id ? str(m.team_B_id) : undefined
+  const home: BasketRosterPlayer[] = []
+  const away: BasketRosterPlayer[] = []
+  const seen = new Set<string>()
+
+  const push = (p: any, side: 'home' | 'away' | '') => {
+    if (!p || typeof p !== 'object') return
+    const name = `${p.first_name || ''} ${p.last_name || ''}`.trim() || str(p.player_name)
+    if (!name || name.toLowerCase() === 'ei pelaajia') return
+    const tid = p.team_id ? str(p.team_id) : ''
+    let which: 'home' | 'away' = side === 'away' ? 'away' : 'home'
+    if (homeId && tid === homeId) which = 'home'
+    else if (awayId && tid === awayId) which = 'away'
+    const mapped = mapLineupPlayer(p, which === 'home' ? homeName : awayName, tid || (which === 'home' ? homeId : awayId))
+    const key = mapped.playerId || `${which}:${mapped.fullName}:${mapped.shirtNumber}`
+    if (seen.has(key)) return
+    seen.add(key)
+    ;(which === 'home' ? home : away).push(mapped)
+  }
+
+  if (Array.isArray(m.lineup_A)) m.lineup_A.forEach((p: any) => push(p, 'home'))
+  if (Array.isArray(m.lineup_B)) m.lineup_B.forEach((p: any) => push(p, 'away'))
+  if (Array.isArray(m.team_A_players)) m.team_A_players.forEach((p: any) => push(p, 'home'))
+  if (Array.isArray(m.team_B_players)) m.team_B_players.forEach((p: any) => push(p, 'away'))
+  if (Array.isArray(m.lineups)) m.lineups.forEach((p: any) => push(p, ''))
+  if (Array.isArray(m.players)) m.players.forEach((p: any) => push(p, ''))
+  return { home, away }
+}
+
+function leadersFromRosters(home: BasketRosterPlayer[], away: BasketRosterPlayer[]): BasketPlayerLeader[] {
+  return [...home, ...away]
+    .map((p) => ({
+      playerName: p.fullName,
+      shirtNumber: p.shirtNumber,
+      teamName: p.teamName,
+      points: p.points,
+      threePointers: p.threePointers,
+      fouls: p.fouls,
+    }))
+    .sort((a, b) => b.points - a.points || b.threePointers - a.threePointers)
+}
+
+export async function fetchBasketTeamRoster(teamId: string): Promise<BasketRosterPlayer[]> {
+  if (!teamId) return []
+  const data = await basketGet(`getTeam?team_id=${encodeURIComponent(teamId)}&players=1`)
+  const t = data?.team
+  if (!t || !Array.isArray(t.players)) return []
+  const teamName = str(t.team_name)
+  return t.players.map((p: any) => mapLineupPlayer(p, teamName, str(t.team_id || teamId)))
+}
+
+export async function fetchBasketHeroMatchId(competitionId = 'etekp2627'): Promise<string> {
+  const data = await basketGet(`getMatches?competition_id=${encodeURIComponent(competitionId)}`)
+  const list: any[] = Array.isArray(data?.matches) ? data.matches : []
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Helsinki' })
+  const todays = list.filter((m) => str(m.date) === today)
+  const live = todays.filter((m) => String(m.status || '').toLowerCase() === 'live')
+  if (live[0]?.match_id) return str(live[0].match_id)
+  const now = new Date().toLocaleTimeString('sv-SE', { timeZone: 'Europe/Helsinki', hour: '2-digit', minute: '2-digit', hour12: false })
+  const upcoming = todays
+    .filter((m) => String(m.status || '').toLowerCase() === 'fixture')
+    .sort((a, b) => str(a.time).localeCompare(str(b.time)))
+    .filter((m) => str(m.time).slice(0, 5) >= now)
+  if (upcoming[0]?.match_id) return str(upcoming[0].match_id)
+  const played = todays.filter((m) => String(m.status || '').toLowerCase() === 'played')
+  if (played[0]?.match_id) return str(played[0].match_id)
+  return '1011397'
+}
+
+
 export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDetail | null> {
   try {
     const data = await basketGet(`getMatch?match_id=${encodeURIComponent(matchId)}`)
@@ -63,42 +167,17 @@ export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDeta
       ? { scoreHome: Number(m.p5s_A || 0), scoreAway: Number(m.p5s_B || 0) }
       : undefined
 
-    const teamFoulsHome = Number(m.live_fouls_A || 2)
-    const teamFoulsAway = Number(m.live_fouls_B || 3)
+    const teamFoulsHome = Number(m.live_fouls_A || 0)
+    const teamFoulsAway = Number(m.live_fouls_B || 0)
 
-    // Parse player points leaders from match lineups/events
-    const leaders: BasketPlayerLeader[] = []
-    if (Array.isArray(m.lineup_A)) {
-      for (const p of m.lineup_A) {
-        if (p.points && Number(p.points) > 0) {
-          leaders.push({
-            playerName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-            shirtNumber: String(p.shirt_number || ''),
-            teamName: String(m.team_A_name || 'Koti'),
-            points: Number(p.points || 0),
-            threePointers: Number(p.three_pointers || 0),
-            fouls: Number(p.fouls || 0),
-          })
-        }
-      }
+    const lineups = extractMatchLineups(m)
+    if (!lineups.home.length && m.team_A_id) {
+      lineups.home = await fetchBasketTeamRoster(String(m.team_A_id))
     }
-
-    if (Array.isArray(m.lineup_B)) {
-      for (const p of m.lineup_B) {
-        if (p.points && Number(p.points) > 0) {
-          leaders.push({
-            playerName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-            shirtNumber: String(p.shirt_number || ''),
-            teamName: String(m.team_B_name || 'Vieras'),
-            points: Number(p.points || 0),
-            threePointers: Number(p.three_pointers || 0),
-            fouls: Number(p.fouls || 0),
-          })
-        }
-      }
+    if (!lineups.away.length && m.team_B_id) {
+      lineups.away = await fetchBasketTeamRoster(String(m.team_B_id))
     }
-
-    leaders.sort((a, b) => b.points - a.points)
+    const leaders: BasketPlayerLeader[] = leadersFromRosters(lineups.home, lineups.away)
 
     const scoreHome = Number(m.fs_A || quarters.reduce((acc, q) => acc + q.scoreHome, 0) || 0)
     const scoreAway = Number(m.fs_B || quarters.reduce((acc, q) => acc + q.scoreAway, 0) || 0)
@@ -109,7 +188,7 @@ export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDeta
       competitionName: String(m.competition_name || 'Koripalloliitto / Eteläinen alue'),
       categoryName: String(m.category_name || ''),
       date: String(m.date || ''),
-      time: String(m.time || ''),
+      time: String(m.time || '').replace(/:00$/, '').slice(0, 5),
       venueName: String(m.venue_name || 'Pelihalli'),
       venueLat: m.venue_lat ? Number(m.venue_lat) : undefined,
       venueLon: m.venue_lon ? Number(m.venue_lon) : undefined,
@@ -131,6 +210,9 @@ export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDeta
       isHomeBonusFreeThrow: teamFoulsHome >= 5,
       isAwayBonusFreeThrow: teamFoulsAway >= 5,
       leaders,
+      homeRoster: lineups.home,
+      awayRoster: lineups.away,
+      lineupNotice: m.lineup_notice ? String(m.lineup_notice) : undefined,
     }
   } catch (err) {
     console.error('[BASKET_API]', err)
@@ -140,13 +222,10 @@ export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDeta
 
 export async function fetchBasketTeamFixtures(competitionId: string): Promise<BasketTeamFixture[]> {
   try {
-    const url = `${API_BASE}/getMatches?competition_id=${encodeURIComponent(competitionId)}&limit=15`
-    const res = await fetch(url, { headers: reqHeaders })
-    if (!res.ok) return []
-    const data = await res.json()
-    if (!Array.isArray(data.matches)) return []
+    const data = await basketGet(`getMatches?competition_id=${encodeURIComponent(competitionId)}`)
+    if (!Array.isArray(data?.matches)) return []
 
-    return data.matches.map((m: any) => {
+    return data.matches.slice(0, 40).map((m: any) => {
       const scoreHome = m.fs_A != null && m.fs_A !== '' ? Number(m.fs_A) : undefined
       const scoreAway = m.fs_B != null && m.fs_B !== '' ? Number(m.fs_B) : undefined
       const hasScore = scoreHome !== undefined && scoreAway !== undefined
