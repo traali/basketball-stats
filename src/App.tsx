@@ -247,6 +247,7 @@ export function App() {
     if (!resolvedName.trim()) return
 
     setFavoriteTeams((prev) => {
+      if (prev[0]?.id === currentTeamId && prev[0]?.name === resolvedName.trim()) return prev
       const withoutCurrent = prev.filter((team) => team.id !== currentTeamId)
       const next = [{ id: currentTeamId, name: resolvedName.trim() }, ...withoutCurrent]
       saveFavoriteTeams(next)
@@ -379,25 +380,27 @@ export function App() {
           </button>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Lempi joukkueet</p>
-          <div className="flex flex-wrap gap-2">
-            {favoriteTeams.map((team) => (
-              <button
-                key={team.id}
-                type="button"
-                onClick={() => handleSelectTeam(team.id, team.name)}
-                className={`h-11 px-4 rounded-full border text-sm font-semibold transition-colors ${
-                  team.id === currentTeamId
-                    ? 'bg-[#3A506B] border-[#6FFFE9]/70 text-[#6FFFE9]'
-                    : 'bg-[#1C2541]/60 border-slate-700 text-slate-200 hover:border-slate-500'
-                }`}
-              >
-                {team.name}
-              </button>
-            ))}
+        {favoriteTeams.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Lempi joukkueet</p>
+            <div className="flex flex-wrap gap-2">
+              {favoriteTeams.map((team) => (
+                <button
+                  key={team.id}
+                  type="button"
+                  onClick={() => handleSelectTeam(team.id, team.name)}
+                  className={`h-11 px-4 rounded-full border text-sm font-semibold transition-colors ${
+                    team.id === currentTeamId
+                      ? 'bg-[#3A506B] border-[#6FFFE9]/70 text-[#6FFFE9]'
+                      : 'bg-[#1C2541]/60 border-slate-700 text-slate-200 hover:border-slate-500'
+                  }`}
+                >
+                  {team.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
