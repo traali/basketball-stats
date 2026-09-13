@@ -274,7 +274,9 @@ export function App() {
       url.searchParams.delete('player')
       url.searchParams.delete('playerId')
       url.searchParams.delete('player_id')
-      window.history.pushState({}, '', `${url.pathname}?${url.searchParams.toString()}`)
+      const queryString = url.searchParams.toString()
+      const nextUrl = `${url.pathname}${queryString ? `?${queryString}` : ''}${url.hash || ''}`
+      window.history.pushState({}, '', nextUrl)
     }
     if (isNumericTeamId(nextTeamId)) {
       writeLastTeamId(nextTeamId)
