@@ -77,3 +77,16 @@ export function buildSearchWithIds(
   }
   return params.toString()
 }
+
+export function buildManualIdsSearch(
+  search: string,
+  values: { matchId: string; teamInput: string; playerId: string; includeTeamId?: boolean },
+): string {
+  const includeTeamId = values.includeTeamId !== false
+  const parsedManualTeamId = parseBasketTeamId(values.teamInput)
+  return buildSearchWithIds(search, {
+    teamId: includeTeamId ? (parsedManualTeamId || null) : undefined,
+    matchId: values.matchId.trim() || null,
+    playerId: values.playerId.trim() || null,
+  })
+}

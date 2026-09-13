@@ -13,6 +13,7 @@ import type { BasketMatchDetail, BasketTeamFixture, BasketStandingRow } from './
 import { parseIncomingCrossRepoQuery } from './types/contracts'
 import { Loader2, Calendar, Award, ShieldAlert, Share2, Trophy, PlusCircle } from 'lucide-react'
 import {
+  buildManualIdsSearch,
   buildSearchWithIds,
   LAST_TEAM_ID_STORAGE_KEY,
   getTeamIdFromSearch,
@@ -146,17 +147,16 @@ export function App() {
     const url = new URL(window.location.href)
     const nextSearch = buildSearchWithIds(url.search, { teamId: null })
     window.history.replaceState({}, '', `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}`)
-    window.localStorage.removeItem(LAST_TEAM_ID_STORAGE_KEY)
     setCurrentTeamId('')
   }
 
   const saveManualIdsToUrl = (includeTeamId = true) => {
     const url = new URL(window.location.href)
-    const parsedManualTeamId = parseBasketTeamId(manualTeamId)
-    const nextSearch = buildSearchWithIds(url.search, {
-      teamId: includeTeamId ? (parsedManualTeamId || null) : undefined,
-      matchId: manualMatchId.trim() || null,
-      playerId: manualPlayerId.trim() || null,
+    const nextSearch = buildManualIdsSearch(url.search, {
+      matchId: manualMatchId,
+      teamInput: manualTeamId,
+      playerId: manualPlayerId,
+      includeTeamId,
     })
     window.history.replaceState({}, '', `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}`)
   }

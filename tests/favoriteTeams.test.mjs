@@ -6,6 +6,7 @@ import {
   normalizeFavoriteTeams,
   getTeamIdFromSearch,
   buildSearchWithIds,
+  buildManualIdsSearch,
 } from '../src/utils/favoriteTeams.ts'
 
 test('parseBasketTeamId extracts numeric id from common formats', () => {
@@ -45,4 +46,25 @@ test('getTeamIdFromSearch reads team id from url params', () => {
 test('buildSearchWithIds updates and clears id params predictably', () => {
   assert.equal(buildSearchWithIds('?foo=1', { teamId: '20053', matchId: '1011397', playerId: '9835' }), 'foo=1&team=20053&matchId=1011397&playerId=9835')
   assert.equal(buildSearchWithIds('?team=20053&matchId=1011397', { teamId: null, matchId: '2000000' }), 'matchId=2000000')
+})
+
+test('buildManualIdsSearch controls whether team id is persisted', () => {
+  assert.equal(
+    buildManualIdsSearch('?team=20053', {
+      matchId: '1011397',
+      teamInput: '20111',
+      playerId: '9835',
+      includeTeamId: false,
+    }),
+    'team=20053&matchId=1011397&playerId=9835',
+  )
+  assert.equal(
+    buildManualIdsSearch('?matchId=1011397', {
+      matchId: '1011397',
+      teamInput: '20111',
+      playerId: '9835',
+      includeTeamId: true,
+    }),
+    'matchId=1011397&team=20111&playerId=9835',
+  )
 })
