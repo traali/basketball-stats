@@ -21,7 +21,7 @@ const reqHeaders = {
   Referer: 'https://tulospalvelu.basket.fi/',
 }
 
-async function basketGet(path: string): Promise<any | null> {
+async function basketGet(path: string): Promise<Record<string, unknown> | null> {
   const urls = [
     `${TASO_PROXY}/${path}`,
     `${API_BASE}/${path}`,
@@ -133,7 +133,7 @@ export function parseBasketResourceFromLocation(href: string): BasketResource {
   return { kind: 'none' }
 }
 
-export function mapLineupPlayer(p: any, teamName: string, teamId?: string): BasketRosterPlayer {
+export function mapLineupPlayer(p: Record<string, unknown>, teamName: string, teamId?: string): BasketRosterPlayer {
   const first = str(p.first_name)
   const last = str(p.last_name)
   const full = `${first} ${last}`.trim() || str(p.player_name, 'Pelaaja')
@@ -152,7 +152,7 @@ export function mapLineupPlayer(p: any, teamName: string, teamId?: string): Bask
   }
 }
 
-export function extractMatchLineups(m: any): { home: BasketRosterPlayer[]; away: BasketRosterPlayer[] } {
+export function extractMatchLineups(m: Record<string, unknown>): { home: BasketRosterPlayer[]; away: BasketRosterPlayer[] } {
   const homeName = str(m.team_A_name, 'Koti')
   const awayName = str(m.team_B_name, 'Vieras')
   const homeId = m.team_A_id ? str(m.team_A_id) : undefined
@@ -161,9 +161,11 @@ export function extractMatchLineups(m: any): { home: BasketRosterPlayer[]; away:
   const away: BasketRosterPlayer[] = []
   const seen = new Set<string>()
 
-  const push = (p: any, side: 'home' | 'away' | '') => {
+  const push = (p: Record<string, unknown>, side: 'home' | 'away' | '') => {
     if (!p || typeof p !== 'object') return
-    const name = `${p.first_name || ''} ${p.last_name || ''}`.trim() || str(p.player_name)
+    const first = str(p.first_name)
+    const last = str(p.last_name)
+    const name = `${first} ${last}`.trim() || str(p.player_name)
     if (!name || name.toLowerCase() === 'ei pelaajia') return
     const tid = p.team_id ? str(p.team_id) : ''
     let which: 'home' | 'away' = side === 'away' ? 'away' : 'home'
@@ -176,12 +178,12 @@ export function extractMatchLineups(m: any): { home: BasketRosterPlayer[]; away:
     ;(which === 'home' ? home : away).push(mapped)
   }
 
-  if (Array.isArray(m.lineup_A)) m.lineup_A.forEach((p: any) => push(p, 'home'))
-  if (Array.isArray(m.lineup_B)) m.lineup_B.forEach((p: any) => push(p, 'away'))
-  if (Array.isArray(m.team_A_players)) m.team_A_players.forEach((p: any) => push(p, 'home'))
-  if (Array.isArray(m.team_B_players)) m.team_B_players.forEach((p: any) => push(p, 'away'))
-  if (Array.isArray(m.lineups)) m.lineups.forEach((p: any) => push(p, ''))
-  if (Array.isArray(m.players)) m.players.forEach((p: any) => push(p, ''))
+  if (Array.isArray(m.lineup_A)) (m.lineup_A as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => push(p, 'home'))
+  if (Array.isArray(m.lineup_B)) (m.lineup_B as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => push(p, 'away'))
+  if (Array.isArray(m.team_A_players)) (m.team_A_players as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => push(p, 'home'))
+  if (Array.isArray(m.team_B_players)) (m.team_B_players as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => push(p, 'away'))
+  if (Array.isArray(m.lineups)) (m.lineups as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => push(p, ''))
+  if (Array.isArray(m.players)) (m.players as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => push(p, ''))
   return { home, away }
 }
 
@@ -201,13 +203,13 @@ function leadersFromRosters(home: BasketRosterPlayer[], away: BasketRosterPlayer
 export async function fetchBasketTeamRoster(teamId: string): Promise<BasketRosterPlayer[]> {
   if (!teamId) return []
   const data = await basketGet(`getTeam?team_id=${encodeURIComponent(teamId)}&players=1`)
-  const t = data?.team
+  const t = data?.team as Record<string, unknown> | undefined
   if (!t || !Array.isArray(t.players)) return []
   const teamName = str(t.team_name)
-  return t.players.map((p: any) => mapLineupPlayer(p, teamName, str(t.team_id || teamId)))
+  return (t.players as Record<string, unknown>[]).map((p: Record<string, unknown>) => mapLineupPlayer(p, teamName, str(t.team_id || teamId)))
 }
 
-function mapMatchFixture(m: any, selectedTeamId?: string): BasketTeamFixture {
+function mapMatchFixture(m: Record<string, unknown>, selectedTeamId?: string): BasketTeamFixture {
   const scoreHome = m.fs_A != null && m.fs_A !== '' ? Number(m.fs_A) : undefined
   const scoreAway = m.fs_B != null && m.fs_B !== '' ? Number(m.fs_B) : undefined
   const hasScore = scoreHome !== undefined && scoreAway !== undefined
@@ -235,15 +237,15 @@ function mapMatchFixture(m: any, selectedTeamId?: string): BasketTeamFixture {
 async function fetchMatchesByPath(path: string, selectedTeamId?: string): Promise<BasketTeamFixture[]> {
   const data = await basketGet(path)
   if (!Array.isArray(data?.matches)) return []
-  return data.matches.slice(0, 40).map((m: any) => mapMatchFixture(m, selectedTeamId))
+  return (data.matches as Record<string, unknown>[]).slice(0, 40).map((m: Record<string, unknown>) => mapMatchFixture(m, selectedTeamId))
 }
 
 export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDetail | null> {
   try {
     const data = await basketGet(`getMatch?match_id=${encodeURIComponent(matchId)}`)
-    if (!data?.match) return null
+    if (!data?.match || typeof data.match !== 'object') return null
 
-    const m = data.match
+    const m = data.match as Record<string, unknown>
 
     // Quarters calculation
     const quarters: BasketQuarterScore[] = [
@@ -273,7 +275,7 @@ export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDeta
 
     return {
       matchId: String(m.match_id || matchId),
-      matchNumber: m.match_number,
+      matchNumber: m.match_number ? String(m.match_number) : undefined,
       competitionName: String(m.competition_name || 'Koripalloliitto / Eteläinen alue'),
       categoryName: String(m.category_name || ''),
       date: String(m.date || ''),
@@ -328,15 +330,16 @@ export async function fetchBasketMatchesByPlayer(playerId: string): Promise<Bask
     if (fromMatches.length > 0) return fromMatches
 
     const playerData = await basketGet(`getPlayer?player_id=${encodeURIComponent(playerId)}`)
+    const playerObj = playerData?.player as Record<string, unknown> | undefined
     const candidates = [
       playerData?.matches,
-      playerData?.player?.matches,
-      playerData?.player?.fixtures,
+      playerObj?.matches,
+      playerObj?.fixtures,
       playerData?.fixtures,
     ]
     for (const list of candidates) {
       if (Array.isArray(list)) {
-        return list.slice(0, 40).map((m: any) => mapMatchFixture(m))
+        return (list as Record<string, unknown>[]).slice(0, 40).map((m: Record<string, unknown>) => mapMatchFixture(m))
       }
     }
     return []

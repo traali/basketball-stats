@@ -104,7 +104,7 @@ export function buildBasketballStatsContract(detail: {
       team: l.teamName,
       goalsOrPoints: l.points,
     })),
-    deepLinkUrl: `https://basketball-stats.pages.dev/match/${encodeURIComponent(detail.matchId)}?embed=true`,
+    deepLinkUrl: `https://basketball-stats-byu.pages.dev/match/${encodeURIComponent(detail.matchId)}?embed=true`,
     updatedAt: new Date().toISOString(),
   }
 }
