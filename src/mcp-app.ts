@@ -109,6 +109,8 @@ declare global {
   }
 }
 
+let _basketballMessageHandler: ((event: MessageEvent) => void) | null = null
+
 export function registerBasketballWebMCP(): ModelContextRegistry | undefined {
   if (typeof window === 'undefined') return
 
@@ -167,7 +169,16 @@ export function registerBasketballWebMCP(): ModelContextRegistry | undefined {
   }
 
   if (typeof document !== 'undefined') {
-    document.modelContext = registry
+    try {
+      Object.defineProperty(document, 'modelContext', {
+        value: registry,
+        configurable: true,
+        enumerable: true,
+        writable: true,
+      })
+    } catch {
+      ;(document as unknown as { modelContext?: ModelContextRegistry }).modelContext = registry
+    }
   }
   if (typeof navigator !== 'undefined') {
     try {
@@ -184,7 +195,10 @@ export function registerBasketballWebMCP(): ModelContextRegistry | undefined {
   if (typeof window !== 'undefined') {
     ;(window as unknown as { modelContext?: ModelContextRegistry }).modelContext = registry
 
-    window.addEventListener('message', async (event: MessageEvent) => {
+    if (_basketballMessageHandler) {
+      window.removeEventListener('message', _basketballMessageHandler)
+    }
+    const messageHandler = async (event: MessageEvent) => {
       const data = event.data
       if (!data || data.type !== 'webmcp:request' || !data.id) return
 
@@ -207,7 +221,9 @@ export function registerBasketballWebMCP(): ModelContextRegistry | undefined {
           '*',
         )
       }
-    })
+    }
+    _basketballMessageHandler = messageHandler
+    window.addEventListener('message', messageHandler)
 
     window.dispatchEvent(
       new CustomEvent('webmcp:ready', { detail: { location: 'navigator.modelContext & document.modelContext' } }),
