@@ -12,14 +12,14 @@ export function FavoritesPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4 space-y-4">
-      <h1 className="text-2xl font-black">Suosikit</h1>
+    <div className="page-shell">
+      <h1 className="text-2xl font-semibold tracking-tight">Suosikit</h1>
       {favorites.length === 0 ? (
         <p className="text-sm text-slate-400">Tallenna joukkue, seura tai pelaaja sydämellä.</p>
       ) : (
         <div className="space-y-2">
           {favorites.map((f) => (
-            <div key={`${f.kind}-${f.id}`} className="flex items-center justify-between rounded-xl border border-slate-800 bg-[#1C2541] px-3 py-3">
+            <div key={`${f.kind}-${f.id}`} className="flex items-center justify-between rounded-xl border border-hairline bg-court px-3 py-3 min-h-12">
               <button type="button" onClick={() => open(f.kind, f.id)} className="text-left min-w-0">
                 <p className="text-sm font-semibold truncate">{f.name}</p>
                 <p className="text-[11px] text-slate-400">{f.subtitle || f.kind}</p>

@@ -88,7 +88,7 @@ export function BasketTeamOnboarding({ onSelectTeam, currentTeamId }: BasketTeam
         </p>
       </div>
 
-      <form onSubmit={handleAddTeam} className="p-4 sm:p-5 rounded-2xl bg-[#1C2541]/60 border border-slate-800 space-y-4 backdrop-blur-md">
+      <form onSubmit={handleAddTeam} className="p-4 sm:p-5 rounded-2xl bg-court/60 border border-hairline space-y-4 backdrop-blur-md">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-300">Joukkueen nimi *</label>
@@ -98,7 +98,7 @@ export function BasketTeamOnboarding({ onSelectTeam, currentTeamId }: BasketTeam
               placeholder="esim. Tapiolan Honka U14"
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-[#0B132B] border border-slate-700 text-white text-xs focus:outline-none focus:border-[#6FFFE9] transition-colors"
+              className="w-full px-3.5 py-2 rounded-xl bg-canvas border border-slate-700 text-white text-xs focus:outline-none focus:border-ice transition-colors"
             />
           </div>
 
@@ -109,7 +109,7 @@ export function BasketTeamOnboarding({ onSelectTeam, currentTeamId }: BasketTeam
               placeholder="esim. U14 Pojat Aluesarja"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-[#0B132B] border border-slate-700 text-white text-xs focus:outline-none focus:border-[#6FFFE9] transition-colors"
+              className="w-full px-3.5 py-2 rounded-xl bg-canvas border border-slate-700 text-white text-xs focus:outline-none focus:border-ice transition-colors"
             />
           </div>
         </div>
@@ -121,14 +121,14 @@ export function BasketTeamOnboarding({ onSelectTeam, currentTeamId }: BasketTeam
             placeholder="https://tulospalvelu.basket.fi/team/12345 tai ID"
             value={basketUrlOrId}
             onChange={(e) => setBasketUrlOrId(e.target.value)}
-            className="w-full px-3.5 py-2 rounded-xl bg-[#0B132B] border border-slate-700 text-white text-xs focus:outline-none focus:border-[#6FFFE9] transition-colors font-mono"
+            className="w-full px-3.5 py-2 rounded-xl bg-canvas border border-slate-700 text-white text-xs focus:outline-none focus:border-ice transition-colors font-mono"
           />
         </div>
 
         <div className="flex items-center justify-between pt-1">
           <button
             type="submit"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#3A506B] hover:bg-[#486382] text-[#6FFFE9] font-bold text-xs shadow-lg transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-lane hover:bg-lane text-ice font-bold text-xs shadow-lg transition-all"
           >
             <Plus className="w-4 h-4" />
             Tallenna joukkue
@@ -154,8 +154,8 @@ export function BasketTeamOnboarding({ onSelectTeam, currentTeamId }: BasketTeam
                 key={team.id}
                 className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all backdrop-blur-md ${
                   isSelected
-                    ? 'bg-[#3A506B]/20 border-[#6FFFE9]/40 shadow-md'
-                    : 'bg-[#1C2541]/40 border-slate-800 hover:border-slate-700'
+                    ? 'bg-lane/20 border-ice/40 shadow-md'
+                    : 'bg-court/40 border-hairline hover:border-slate-700'
                 }`}
               >
                 <div
@@ -163,10 +163,10 @@ export function BasketTeamOnboarding({ onSelectTeam, currentTeamId }: BasketTeam
                   className="space-y-0.5 cursor-pointer flex-1"
                 >
                   <div className="flex items-center gap-2">
-                    <Shield className={`w-3.5 h-3.5 ${isSelected ? 'text-[#6FFFE9]' : 'text-slate-500'}`} />
+                    <Shield className={`w-3.5 h-3.5 ${isSelected ? 'text-ice' : 'text-slate-500'}`} />
                     <span className="text-sm font-bold text-white">{team.name}</span>
                     {isSelected && (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#6FFFE9]/20 text-[#6FFFE9] font-semibold">
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-ice/20 text-ice font-semibold">
                         Aktiivinen
                       </span>
                     )}

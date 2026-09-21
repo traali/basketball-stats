@@ -50,9 +50,9 @@ export function SearchPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4 space-y-5">
+    <div className="page-shell">
       <div>
-        <h1 className="text-2xl font-black">Haku</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Haku</h1>
         <p className="text-xs text-slate-400 mt-1">Joukkue, seura, sarja, pelaaja tai ottelulinkki.</p>
       </div>
       <form
@@ -60,7 +60,7 @@ export function SearchPage() {
           e.preventDefault()
           submit(input)
         }}
-        className="flex items-center bg-[#1C2541] border border-slate-800 rounded-2xl overflow-hidden focus-within:border-[#5BC0BE]"
+        className="flex items-center bg-court border border-hairline rounded-2xl overflow-hidden focus-within:border-accent"
       >
         <Search className="w-4 h-4 text-slate-400 ml-4" />
         <input
@@ -68,20 +68,15 @@ export function SearchPage() {
           onChange={(e) => setInput(e.target.value)}
           autoFocus={!q}
           placeholder="Hae Westend, U14, pelaaja tai liitä basket.fi-linkki"
-          className="grow bg-transparent text-white text-sm px-3 py-3 focus:outline-none placeholder:text-slate-500"
+          className="grow bg-transparent text-white text-sm px-3 py-3 min-h-12 focus:outline-none placeholder:text-slate-500"
         />
-        <button type="submit" className="px-4 py-2 mr-1.5 rounded-xl bg-[#3A506B] text-[#6FFFE9] text-xs font-bold">
+        <button type="submit" className="btn-ice mr-1.5 my-1.5">
           Hae
         </button>
       </form>
       <div className="flex flex-wrap gap-1.5">
         {CHIPS.map((chip) => (
-          <button
-            key={chip}
-            type="button"
-            onClick={() => submit(chip)}
-            className="px-3 py-1.5 rounded-full border border-slate-800 bg-[#1C2541] text-[11px] font-semibold text-slate-300 hover:border-[#5BC0BE]/50"
-          >
+          <button key={chip} type="button" onClick={() => submit(chip)} className="chip">
             {chip}
           </button>
         ))}
@@ -128,15 +123,15 @@ function HitGroup({
   if (items.length === 0) return null
   return (
     <section className="space-y-2">
-      <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-        <Icon className="w-3.5 h-3.5 text-[#5BC0BE]" /> {title}
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+        <Icon className="w-3.5 h-3.5 text-accent" /> {title}
       </h2>
       {items.map((h) => (
         <button
           key={`${h.kind}-${h.id}`}
           type="button"
           onClick={() => onOpen(h.id)}
-          className="w-full text-left rounded-xl border border-slate-800 bg-[#1C2541] px-3 py-3 hover:border-[#5BC0BE]/50"
+          className="w-full text-left rounded-xl border border-hairline bg-court px-3 py-3 min-h-12 hover:border-accent/50 transition-colors"
         >
           <p className="text-sm font-semibold text-white">{h.title}</p>
           <p className="text-[11px] text-slate-400">{h.subtitle}</p>

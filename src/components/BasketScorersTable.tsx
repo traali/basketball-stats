@@ -9,8 +9,8 @@ interface BasketScorersTableProps {
 
 export const BasketScorersTable: React.FC<BasketScorersTableProps> = ({ leaders, onPlayer }) => {
   return (
-    <div className="bg-[#1C2541] rounded-2xl p-5 border border-slate-700/60 shadow-xl space-y-4">
-      <div className="flex items-center justify-between border-b border-slate-700/50 pb-3">
+    <div className="bg-court rounded-2xl p-5 border border-hairline shadow-xl space-y-4">
+      <div className="flex items-center justify-between border-b border-hairline pb-3">
         <h3 className="font-bold text-sm tracking-wide text-slate-100 flex items-center gap-2">
           <Award className="w-4 h-4 text-amber-400" />
           Pistetilasto & 3-Pisteen Korit
@@ -28,12 +28,12 @@ export const BasketScorersTable: React.FC<BasketScorersTableProps> = ({ leaders,
               type="button"
               onClick={() => leader.playerId && onPlayer?.(leader.playerId)}
               disabled={!leader.playerId || !onPlayer}
-              className="w-full flex items-center justify-between p-3 rounded-xl bg-[#0B132B]/60 border border-slate-800 text-xs text-left disabled:cursor-default hover:border-[#5BC0BE]/40"
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-canvas/60 border border-hairline text-xs text-left disabled:cursor-default hover:border-accent/40"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <span className="w-5 text-center font-bold text-slate-500">#{idx + 1}</span>
                 <div className="min-w-0">
-                  <div className={`font-bold truncate ${leader.playerId && onPlayer ? 'text-[#6FFFE9]' : 'text-slate-200'}`}>
+                  <div className={`font-bold truncate ${leader.playerId && onPlayer ? 'text-ice' : 'text-slate-200'}`}>
                     {leader.shirtNumber ? `#${leader.shirtNumber} ` : ''}{leader.playerName}
                   </div>
                   <div className="text-[10px] text-slate-400 truncate max-w-[150px]">{leader.teamName}</div>
@@ -48,7 +48,7 @@ export const BasketScorersTable: React.FC<BasketScorersTableProps> = ({ leaders,
                   </div>
                 )}
                 <div className="text-right">
-                  <span className="font-black text-sm text-[#6FFFE9]">{leader.points}</span>
+                  <span className="font-black text-sm text-ice">{leader.points}</span>
                   <span className="text-[10px] text-slate-400 block">{leader.fouls} virhettä</span>
                 </div>
               </div>

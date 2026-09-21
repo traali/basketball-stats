@@ -36,16 +36,16 @@ export function BrowsePage() {
   }, [comps, filter, q])
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4 space-y-4">
+    <div className="page-shell">
       <div>
-        <h1 className="text-2xl font-black">Selaa sarjoja</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Selaa sarjoja</h1>
         <p className="text-xs text-slate-400 mt-1">Kilpailu → sarja → lohko, sama polku kuin jalkapallossa.</p>
       </div>
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Suodata kilpailun nimellä…"
-        className="w-full rounded-2xl border border-slate-800 bg-[#1C2541] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#5BC0BE]"
+        className="field"
       />
       <div className="flex flex-wrap gap-1.5">
         {FILTERS.map((f) => (
@@ -53,16 +53,14 @@ export function BrowsePage() {
             key={f.id}
             type="button"
             onClick={() => setFilter(f.id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-              filter === f.id ? 'bg-[#5BC0BE] text-[#0B132B]' : 'border border-slate-800 text-slate-400'
-            }`}
+            className={`chip ${filter === f.id ? 'chip-active' : ''}`}
           >
             {f.label}
           </button>
         ))}
       </div>
       {loading ? (
-        <div className="animate-pulse h-24 rounded-2xl bg-[#1C2541]" />
+        <div className="animate-pulse h-24 rounded-2xl bg-court" />
       ) : (
         <div className="space-y-2">
           {visible.map((c) => (
@@ -70,7 +68,7 @@ export function BrowsePage() {
               key={c.competitionId}
               type="button"
               onClick={() => navigate(`/competition/${c.competitionId}`)}
-              className="w-full text-left rounded-2xl border border-slate-800 bg-[#1C2541] p-4 hover:border-[#5BC0BE]/50"
+              className="w-full text-left rounded-2xl border border-hairline bg-court p-4 hover:border-accent/50"
             >
               <p className="font-semibold text-white">{c.competitionName}</p>
               <p className="text-xs text-slate-400">

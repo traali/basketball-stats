@@ -1,45 +1,37 @@
 /**
- * Basketball Stats MCP App Tool Handler & WebMCP Browser Registry
- * Standard: @modelcontextprotocol/ext-apps (2026 UI Capabilities Standard)
- * Reference: https://modelcontextprotocol.info/blog/mcp-apps-ui-capabilities/
+ * Basketball Stats WebMCP tools.
+ * Registers on native document.modelContext when present; otherwise the spec polyfill.
  */
 
-import { fetchBasketMatch } from './services/basketApi'
+import {
+  fetchBasketMatch,
+  fetchBasketGroup,
+  fetchBasketTeamProfile,
+  pickCurrentGroup,
+  mapGroupTeamsToStandings,
+} from './services/basketApi'
 import { buildBasketballStatsContract } from './types/contracts'
-import type { SportStatsContract } from './types/contracts'
+import { installModelContext, type ModelContextTool } from './webmcp'
 
-export interface McpToolResponse {
-  content: Array<{
-    type: 'text' | 'resource'
-    text?: string
-    resource?: {
-      uri: string
-      mimeType: string
-      text?: string
-    }
-  }>
-  _meta?: {
-    ui?: {
-      resourceUri: string
-    }
+function textResult(text: string, extra?: Record<string, unknown>) {
+  return {
+    content: [{ type: 'text' as const, text }],
+    ...extra,
   }
 }
 
-/**
- * MCP App Tool: get_basketball_game_card
- */
-export async function getBasketballGameCardTool(args: {
-  matchId?: string
-}): Promise<McpToolResponse> {
-  const match = await fetchBasketMatch(args.matchId || '1011397')
-
-  if (!match) {
-    return {
-      content: [{ type: 'text', text: `Ottelua ${args.matchId || '1011397'} ei löytynyt Basket.fi -palvelusta.` }],
-    }
+async function getBasketballGameCardTool(args: Record<string, unknown>) {
+  const matchId = String(args.matchId || '').trim()
+  if (!matchId) {
+    return textResult('Anna matchId (Basket.fi ottelutunnus). Ei kovakoodattua ottelua.')
   }
 
-  const contract: SportStatsContract = buildBasketballStatsContract({
+  const match = await fetchBasketMatch(matchId)
+  if (!match) {
+    return textResult(`Ottelua ${matchId} ei löytynyt Basket.fi -palvelusta.`)
+  }
+
+  const contract = buildBasketballStatsContract({
     matchId: match.matchId,
     homeTeamName: match.homeTeamName,
     awayTeamName: match.awayTeamName,
@@ -52,16 +44,16 @@ export async function getBasketballGameCardTool(args: {
   })
 
   const qScores = match.quarters.map((q) => `Q${q.quarter}: ${q.scoreHome}–${q.scoreAway}`).join(', ')
-  const summary = `🏀 ${contract.homeTeamName} ${contract.homeScore} – ${contract.awayScore} ${contract.awayTeamName} (${match.competitionName}). Neljännekset: ${qScores}. Pistehai: ${match.leaders[0]?.playerName || 'Ei tilastoitu'} (${match.leaders[0]?.points || 0}p).`
+  const summary =
+    match.phase === 'upcoming'
+      ? `${match.homeTeamName} vs ${match.awayTeamName} (${match.competitionName}) — tuleva ottelu ${match.date} ${match.time}.`
+      : `${match.homeTeamName} ${match.scoreHome}–${match.scoreAway} ${match.awayTeamName} (${match.competitionName}). Neljännekset: ${qScores}. Pistehai: ${match.leaders[0]?.playerName || 'Ei tilastoitu'} (${match.leaders[0]?.points || 0}p).`
 
   return {
     content: [
+      { type: 'text' as const, text: summary },
       {
-        type: 'text',
-        text: summary,
-      },
-      {
-        type: 'resource',
+        type: 'resource' as const,
         resource: {
           uri: 'data://basketball/stats.json',
           mimeType: 'application/json',
@@ -74,197 +66,96 @@ export async function getBasketballGameCardTool(args: {
         resourceUri: `ui://basketball/game-card?matchId=${encodeURIComponent(match.matchId)}`,
       },
     },
+    match,
+    contract,
   }
 }
 
-export interface ModelContextTool {
-  name: string
-  description: string
-  inputSchema: {
-    type: string
-    properties?: Record<string, unknown>
-    required?: string[]
-  }
-  execute: (args: Record<string, unknown>) => Promise<unknown>
-}
+async function getBasketballStandingsTool(args: Record<string, unknown>) {
+  const teamId = String(args.teamId || '').trim()
+  const competitionId = String(args.competitionId || '').trim()
+  const categoryId = String(args.categoryId || '').trim()
+  const groupId = String(args.groupId || '').trim()
 
-export interface ModelContextRegistry {
-  registerTool: (tool: ModelContextTool) => Promise<void> | void
-  unregisterTool?: (name: string) => Promise<void> | void
-  getTools: () => ModelContextTool[]
-  listTools: () => Promise<{ tools: Array<{ name: string; description: string; inputSchema: ModelContextTool['inputSchema'] }> }>
-  callTool: (params: { name: string; arguments?: Record<string, unknown> }) => Promise<McpToolResponse>
-  executeTool: (name: string, args?: Record<string, unknown>) => Promise<unknown>
-}
-
-declare global {
-  interface Document {
-    modelContext?: ModelContextRegistry
-  }
-  interface Navigator {
-    modelContext?: ModelContextRegistry
-  }
-  interface Window {
-    modelContext?: ModelContextRegistry
-  }
-}
-
-let _basketballMessageHandler: ((event: MessageEvent) => void) | null = null
-
-export function registerBasketballWebMCP(): ModelContextRegistry | undefined {
-  if (typeof window === 'undefined') return
-
-  const registeredTools = new Map<string, ModelContextTool>()
-
-  const registry: ModelContextRegistry = {
-    registerTool: async (tool: ModelContextTool) => {
-      registeredTools.set(tool.name, tool)
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('webmcp:tool_registered', { detail: { toolName: tool.name } }))
-      }
-    },
-    unregisterTool: async (name: string) => {
-      registeredTools.delete(name)
-    },
-    getTools: () => Array.from(registeredTools.values()),
-    listTools: async () => ({
-      tools: Array.from(registeredTools.values()).map((t) => ({
-        name: t.name,
-        description: t.description,
-        inputSchema: t.inputSchema,
-      })),
-    }),
-    callTool: async (params: { name: string; arguments?: Record<string, unknown> }) => {
-      const tool = registeredTools.get(params.name)
-      if (!tool) {
-        return {
-          content: [{ type: 'text', text: `Error: Tool '${params.name}' not found in Basketball Stats WebMCP.` }],
-        }
-      }
-      try {
-        const res = await tool.execute(params.arguments || {})
-        if (res && typeof res === 'object' && 'content' in res) {
-          return res as McpToolResponse
-        }
-        return {
-          content: [
-            {
-              type: 'text',
-              text: typeof res === 'string' ? res : JSON.stringify(res, null, 2),
-            },
-          ],
-        }
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : String(err)
-        return {
-          content: [{ type: 'text', text: `Error executing '${params.name}': ${errorMessage}` }],
-        }
-      }
-    },
-    executeTool: async (name: string, args: Record<string, unknown> = {}) => {
-      const tool = registeredTools.get(name)
-      if (!tool) throw new Error(`Tool '${name}' not found`)
-      return tool.execute(args)
-    },
-  }
-
-  if (typeof document !== 'undefined') {
-    try {
-      Object.defineProperty(document, 'modelContext', {
-        value: registry,
-        configurable: true,
-        enumerable: true,
-        writable: true,
-      })
-    } catch {
-      ;(document as unknown as { modelContext?: ModelContextRegistry }).modelContext = registry
+  let group = null
+  if (competitionId && categoryId && groupId) {
+    group = await fetchBasketGroup(competitionId, categoryId, groupId)
+  } else if (teamId) {
+    const profile = await fetchBasketTeamProfile(teamId)
+    const current = profile ? pickCurrentGroup(profile.groups) : null
+    if (current) {
+      group = await fetchBasketGroup(current.competitionId, current.categoryId, current.groupId)
     }
   }
-  if (typeof navigator !== 'undefined') {
-    try {
-      Object.defineProperty(navigator, 'modelContext', {
-        value: registry,
-        configurable: true,
-        enumerable: true,
-        writable: true,
-      })
-    } catch {
-      ;(navigator as unknown as { modelContext?: ModelContextRegistry }).modelContext = registry
-    }
-  }
-  if (typeof window !== 'undefined') {
-    ;(window as unknown as { modelContext?: ModelContextRegistry }).modelContext = registry
 
-    if (_basketballMessageHandler) {
-      window.removeEventListener('message', _basketballMessageHandler)
-    }
-    const messageHandler = async (event: MessageEvent) => {
-      const data = event.data
-      if (!data || data.type !== 'webmcp:request' || !data.id) return
-
-      try {
-        if (data.method === 'tools/list' || data.method === 'listTools') {
-          const result = await registry.listTools()
-          window.postMessage({ type: 'webmcp:response', id: data.id, result }, '*')
-        } else if (data.method === 'tools/call' || data.method === 'callTool') {
-          const result = await registry.callTool(data.params || { name: '', arguments: {} })
-          window.postMessage({ type: 'webmcp:response', id: data.id, result }, '*')
-        }
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'WebMCP execution failed'
-        window.postMessage(
-          {
-            type: 'webmcp:response',
-            id: data.id,
-            error: { message: errorMessage },
-          },
-          '*',
-        )
-      }
-    }
-    _basketballMessageHandler = messageHandler
-    window.addEventListener('message', messageHandler)
-
-    window.dispatchEvent(
-      new CustomEvent('webmcp:ready', { detail: { location: 'navigator.modelContext & document.modelContext' } }),
+  if (!group) {
+    return textResult(
+      'Anna teamId tai competitionId + categoryId + groupId. Dummy-sarjataulukot ovat kiellettyjä.',
     )
   }
 
-  // Register get_basketball_game_card tool
-  registry.registerTool({
+  const standings = mapGroupTeamsToStandings(group.teams, group.matches)
+  const summary = `${group.competitionName} · ${group.categoryName} · ${group.groupName}: ${standings.length} joukkuetta.`
+  return {
+    content: [{ type: 'text' as const, text: summary }],
+    group: {
+      groupId: group.groupId,
+      groupName: group.groupName,
+      competitionName: group.competitionName,
+      categoryName: group.categoryName,
+    },
+    teams: standings,
+    pointsRule: '2 pistettä voitosta, 1 tappiosta (Basket.fi)',
+  }
+}
+
+const TOOLS: ModelContextTool[] = [
+  {
     name: 'get_basketball_game_card',
-    description: 'Fetches basketball match details, 4-quarter scoring progression, team fouls, and interactive game card widget URI.',
+    title: 'Koripallo-ottelu',
+    description:
+      'Hakee Basket.fi-ottelun neljännespisteet, joukkuevirheet ja pistetilaston. Vaadi matchId; ei kovakoodattua ottelua.',
     inputSchema: {
       type: 'object',
       properties: {
-        matchId: { type: 'string', description: 'Basket.fi match ID (e.g. 1011397)' },
+        matchId: { type: 'string', description: 'Basket.fi match ID' },
       },
       required: ['matchId'],
     },
-    execute: async (args) => getBasketballGameCardTool(args as { matchId?: string }),
-  })
-
-  // Register get_basketball_standings tool
-  registry.registerTool({
+    annotations: { readOnlyHint: true },
+    execute: getBasketballGameCardTool,
+  },
+  {
     name: 'get_basketball_standings',
-    description: 'Fetches basketball standings, win-loss record, basket differential, and team streaks.',
+    title: 'Koripallon sarjataulukko',
+    description:
+      'Hakee live Basket.fi -sarjataulukon lohkolle. Anna teamId tai competitionId+categoryId+groupId.',
     inputSchema: {
       type: 'object',
       properties: {
-        category: { type: 'string', description: 'Optional competition/category name' },
+        teamId: { type: 'string', description: 'Joukkueen TASO-tunnus' },
+        competitionId: { type: 'string' },
+        categoryId: { type: 'string' },
+        groupId: { type: 'string' },
       },
     },
-    execute: async ({ category }) => ({
-      category: (category as string) || 'U14 Pojat SM-sarja',
-      teams: [
-        { rank: 1, team: 'Tapiolan Honka', played: 10, won: 9, lost: 1, points: 18, diff: '+124', streak: 'V5' },
-        { rank: 2, team: 'Helsingin NMKY', played: 10, won: 8, lost: 2, points: 16, diff: '+98', streak: 'V2' },
-        { rank: 3, team: 'Leppävaaran Pyrintö', played: 10, won: 6, lost: 4, points: 12, diff: '+35', streak: 'H1' },
-      ],
-      pointsRule: '2 points for win, 0 points for loss',
-    }),
-  })
+    annotations: { readOnlyHint: true },
+    execute: getBasketballStandingsTool,
+  },
+]
 
-  console.log('✨ [WebMCP] Successfully registered Basketball Stats tools into navigator.modelContext & document.modelContext')
-  return registry
+export async function registerBasketballWebMCP() {
+  const mc = installModelContext()
+  if (!mc) return undefined
+  for (const tool of TOOLS) {
+    try {
+      await mc.registerTool(tool)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (!/already registered/i.test(message)) {
+        console.warn('[WebMCP] registerTool failed:', tool.name, message)
+      }
+    }
+  }
+  return mc
 }

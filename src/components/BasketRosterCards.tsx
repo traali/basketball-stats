@@ -8,25 +8,25 @@ function Card({ p, onPlayer }: { p: BasketRosterPlayer; onPlayer?: (playerId: st
       type="button"
       onClick={() => clickable && onPlayer?.(p.playerId)}
       disabled={!clickable}
-      className="rounded-xl border border-slate-800 bg-[#0B132B]/80 px-3 py-2.5 text-left disabled:cursor-default hover:border-[#5BC0BE]/40"
+      className="rounded-xl border border-hairline bg-canvas/80 px-3 py-2.5 text-left disabled:cursor-default hover:border-accent/40"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className={`text-sm font-bold truncate ${clickable ? 'text-[#6FFFE9]' : 'text-slate-100'}`}>
-          {p.shirtNumber ? <span className="text-[#6FFFE9] font-mono mr-1">#{p.shirtNumber}</span> : null}
+        <span className={`text-sm font-bold truncate ${clickable ? 'text-ice' : 'text-slate-100'}`}>
+          {p.shirtNumber ? <span className="text-ice font-mono mr-1">#{p.shirtNumber}</span> : null}
           {p.fullName}
         </span>
         {p.birthYear ? <span className="text-[11px] text-slate-500">{p.birthYear}</span> : null}
       </div>
       <div className="mt-1.5 grid grid-cols-3 gap-1 text-center">
-        <div className="rounded-lg bg-[#1C2541] py-1">
+        <div className="rounded-lg bg-court py-1">
           <div className="text-[9px] uppercase text-slate-500">PTS</div>
-          <div className="text-sm font-black text-[#6FFFE9]">{p.points}</div>
+          <div className="text-sm font-black text-ice">{p.points}</div>
         </div>
-        <div className="rounded-lg bg-[#1C2541] py-1">
+        <div className="rounded-lg bg-court py-1">
           <div className="text-[9px] uppercase text-slate-500">AST</div>
-          <div className="text-sm font-black text-[#6FFFE9]">{p.assists}</div>
+          <div className="text-sm font-black text-ice">{p.assists}</div>
         </div>
-        <div className="rounded-lg bg-[#1C2541] py-1">
+        <div className="rounded-lg bg-court py-1">
           <div className="text-[9px] uppercase text-slate-500">PF</div>
           <div className="text-sm font-black text-white">{p.fouls}</div>
         </div>
@@ -48,10 +48,10 @@ function Column({
 }) {
   const rows = [...roster].sort((a, b) => b.points - a.points || b.assists - a.assists)
   return (
-    <div className="bg-[#1C2541] rounded-2xl p-4 border border-slate-700/60">
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/50">
+    <div className="bg-court rounded-2xl p-4 border border-hairline">
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-hairline">
         <h3 className="font-bold text-sm text-slate-100 flex items-center gap-2">
-          <Users className="w-4 h-4 text-[#5BC0BE]" />
+          <Users className="w-4 h-4 text-accent" />
           {teamName}
         </h3>
         <span className="text-[11px] text-slate-400">{rows.length} pelaajaa</span>

@@ -26,9 +26,9 @@ export function BasketStandingsTable({ standings, highlightTeamId }: BasketStand
         <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">Basket.fi</span>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-[#1C2541]/40 backdrop-blur-md">
+      <div className="overflow-x-auto rounded-2xl border border-hairline bg-court/40 backdrop-blur-md">
         <table className="w-full text-left text-xs">
-          <thead className="bg-[#1C2541]/80 text-slate-400 font-semibold border-b border-slate-800">
+          <thead className="bg-court/80 text-slate-400 font-semibold border-b border-hairline">
             <tr>
               <th className="py-2.5 px-3 w-8 text-center">#</th>
               <th className="py-2.5 px-3">Joukkue</th>
@@ -38,11 +38,11 @@ export function BasketStandingsTable({ standings, highlightTeamId }: BasketStand
               <th className="py-2.5 px-2 text-center">H</th>
               <th className="py-2.5 px-3 text-center">Korit</th>
               <th className="py-2.5 px-2 text-center">Ero</th>
-              <th className="py-2.5 px-3 text-center font-bold text-[#6FFFE9]">Pisteet</th>
+              <th className="py-2.5 px-3 text-center font-bold text-ice">Pisteet</th>
               <th className="py-2.5 px-3 text-center">Kunto</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/50">
+          <tbody className="divide-y divide-hairline">
             {standings.map((row) => {
               const isHighlighted = row.teamId === highlightTeamId
               return (
@@ -52,7 +52,7 @@ export function BasketStandingsTable({ standings, highlightTeamId }: BasketStand
                   onClick={() => row.teamId && navigate(`/team/${row.teamId}`)}
                 >
                   <td className="py-2.5 px-3 text-center font-mono text-slate-400">{row.rank}</td>
-                  <td className="py-2.5 px-3 font-semibold text-white whitespace-nowrap hover:text-[#6FFFE9]">{row.teamName}</td>
+                  <td className="py-2.5 px-3 font-semibold text-white whitespace-nowrap hover:text-ice">{row.teamName}</td>
                   <td className="py-2.5 px-2 text-center font-mono text-slate-300">{row.matchesPlayed}</td>
                   <td className="py-2.5 px-2 text-center font-mono text-emerald-400">{row.wins}</td>
                   {showDraws ? (
@@ -65,7 +65,7 @@ export function BasketStandingsTable({ standings, highlightTeamId }: BasketStand
                   <td className={`py-2.5 px-2 text-center font-mono ${row.diff >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {row.diff > 0 ? `+${row.diff}` : row.diff}
                   </td>
-                  <td className="py-2.5 px-3 text-center font-mono font-black text-[#6FFFE9] text-sm">
+                  <td className="py-2.5 px-3 text-center font-mono font-black text-ice text-sm">
                     {row.totalPoints}
                   </td>
                   <td className="py-2.5 px-3 text-center">

@@ -10,9 +10,9 @@ type Scope = 'syksy' | 'kevat' | 'all'
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl bg-[#0B132B] border border-slate-800 p-3 text-center">
+    <div className="rounded-xl bg-canvas border border-hairline p-3 text-center">
       <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
-      <div className="text-xl font-black text-[#6FFFE9] tabular-nums">{value}</div>
+      <div className="text-xl font-black text-ice tabular-nums">{value}</div>
     </div>
   )
 }
@@ -102,7 +102,7 @@ export function PlayerPage() {
           <button type="button" onClick={() => navigate(-1)} className="text-xs text-slate-400 flex items-center gap-1 mb-2">
             <ArrowLeft className="w-3.5 h-3.5" /> Takaisin
           </button>
-          <h1 className="text-2xl font-black">{player.fullName}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{player.fullName}</h1>
           <p className="text-xs text-slate-400">
             {player.clubName || player.teams[0]?.clubName || 'Pelaaja'}
             {player.birthYear ? ` · s. ${player.birthYear}` : ''}
@@ -132,7 +132,7 @@ export function PlayerPage() {
               key={t.teamId}
               type="button"
               onClick={() => navigate(`/team/${t.teamId}`)}
-              className="px-3 py-1.5 rounded-full border border-slate-800 bg-[#1C2541] text-[11px] font-semibold text-[#6FFFE9]"
+              className="px-3 py-1.5 rounded-full border border-hairline bg-court text-[11px] font-semibold text-ice"
             >
               {t.teamName}
             </button>
@@ -148,7 +148,7 @@ export function PlayerPage() {
             onClick={() => setHalf(s)}
             className={clsx(
               'text-xs px-3 py-1.5 rounded-xl font-bold',
-              half === s ? 'bg-[#3A506B] text-[#6FFFE9] border border-[#5BC0BE]/40' : 'bg-[#1C2541] text-slate-400',
+              half === s ? 'bg-lane text-ice border border-accent/40' : 'bg-court text-slate-400',
             )}
           >
             {s === 'syksy' ? `Syksy ${year}` : s === 'kevat' ? `Kevät ${year}` : 'Koko vuosi'}
@@ -175,7 +175,7 @@ export function PlayerPage() {
               type="button"
               onClick={() => navigate(`/match/${row.matchId}`)}
               className={clsx(
-                'w-full text-left rounded-xl border border-slate-800 bg-[#1C2541] px-3 py-3 hover:border-[#5BC0BE]/50',
+                'w-full text-left rounded-xl border border-hairline bg-court px-3 py-3 hover:border-accent/50',
                 row.dnp && 'opacity-50',
               )}
             >
@@ -183,7 +183,7 @@ export function PlayerPage() {
                 <p className="text-sm font-semibold text-white truncate">
                   {row.homeTeam} – {row.awayTeam}
                 </p>
-                <span className="text-[11px] font-mono text-[#6FFFE9]">
+                <span className="text-[11px] font-mono text-ice">
                   {row.upcoming ? 'vs' : row.score || ''}
                 </span>
               </div>
