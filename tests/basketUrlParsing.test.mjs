@@ -25,4 +25,22 @@ describe('basket URL resource parsing', () => {
     const parsed = parseBasketResourceFromLocation(`https://basketball-stats-byu.pages.dev/?url=${encoded}`)
     assert.deepEqual(parsed, { kind: 'team', id: '20053' })
   })
+
+  it('parses hash-router match, team and player paths', () => {
+    const match = parseBasketResourceFromLocation('https://basketball-stats-byu.pages.dev/#/match/1012345')
+    const team = parseBasketResourceFromLocation('https://basketball-stats-byu.pages.dev/#/team/20053')
+    const player = parseBasketResourceFromLocation('https://basketball-stats-byu.pages.dev/#/player/9835')
+    assert.deepEqual(match, { kind: 'match', id: '1012345' })
+    assert.deepEqual(team, { kind: 'team', id: '20053' })
+    assert.deepEqual(player, { kind: 'player', id: '9835' })
+  })
+
+  it('parses snake_case query aliases from hash', () => {
+    const match = parseBasketResourceFromLocation('https://basketball-stats-byu.pages.dev/#/?match_id=1012345')
+    const team = parseBasketResourceFromLocation('https://basketball-stats-byu.pages.dev/#/?team_id=20053')
+    const player = parseBasketResourceFromLocation('https://basketball-stats-byu.pages.dev/#/?player_id=9835')
+    assert.deepEqual(match, { kind: 'match', id: '1012345' })
+    assert.deepEqual(team, { kind: 'team', id: '20053' })
+    assert.deepEqual(player, { kind: 'player', id: '9835' })
+  })
 })
