@@ -1,6 +1,7 @@
-import { Activity, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CourtMark } from './CourtMark'
+import { WebMcpBadge } from './WebMcpBadge'
 
 interface HeaderProps {
   isEmbed?: boolean
@@ -34,10 +35,7 @@ export function Header({ isEmbed }: HeaderProps) {
             <Search className="w-3.5 h-3.5" />
             Hae
           </button>
-          <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <Activity className="w-3 h-3" />
-            Live
-          </span>
+          <WebMcpBadge />
         </div>
       </div>
     </header>

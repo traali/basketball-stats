@@ -11,7 +11,11 @@ const commitHash = (() => {
 })()
 const buildTime = new Date().toISOString()
 
-// https://vite.dev/config/
+const webmcpHeaders = {
+  'Origin-Agent-Cluster': '?1',
+  'Permissions-Policy': 'tools=(self)',
+}
+
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify('1.0.0'),
@@ -19,4 +23,6 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(buildTime),
   },
   plugins: [react()],
+  server: { headers: webmcpHeaders },
+  preview: { headers: webmcpHeaders },
 })

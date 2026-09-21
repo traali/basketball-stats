@@ -4,7 +4,13 @@ import './index.css'
 import App from './App'
 import { registerBasketballWebMCP } from './mcp-app'
 
-void registerBasketballWebMCP()
+const ready = registerBasketballWebMCP()
+if (typeof window !== 'undefined') {
+  window.__WEBMCP_READY__ = ready
+  window.addEventListener('pageshow', () => {
+    void registerBasketballWebMCP()
+  })
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
