@@ -1,16 +1,58 @@
 /**
  * Cross-Repo Contract Adapter for Basketball-Stats
- * Canonical Contracts v1.0.0
+ * Canonical Contracts v1.0.0 — keep required SportStats fields; basketball extras are optional.
  */
 
 export const CONTRACT_VERSION = '1.0.0' as const
 
 export type SupportedSport = 'football' | 'volleyball' | 'floorball' | 'basketball' | 'weather' | 'other'
 
+export interface MatchdayContextContract {
+  eventId: string
+  sport: SupportedSport
+  startTime: string
+  warmupTime?: string
+  homeTeam: string
+  awayTeam: string
+  venueName: string
+  coordinates?: {
+    latitude: number
+    longitude: number
+  }
+  association?: 'palloliitto' | 'salibandy' | 'basket' | 'torneopal' | 'fmi' | 'other'
+  externalId?: string
+}
+
+export interface ParkingRiskContract {
+  venueSlug: string
+  riskRating: number
+  safetyCategory: 'safe' | 'moderate' | 'trap'
+  parkingZone?: string
+  walkDistanceMeters?: number
+  walkTimeMinutes?: number
+  deepLinkUrl: string
+  advisoryNote?: string
+  updatedAt?: string
+}
+
 export interface SportStatsContract {
   sport: SupportedSport
+  matchOrTeamId: string
   matchId?: string
   teamId?: string
+  recentForm?: string[]
+  standingsSummary?: {
+    rank: number
+    totalTeams: number
+    points: number
+    playedMatches: number
+  }
+  headToHead?: {
+    wins: number
+    draws: number
+    losses: number
+    lastResult?: string
+  }
   homeTeamName?: string
   awayTeamName?: string
   homeScore?: number
@@ -24,11 +66,6 @@ export interface SportStatsContract {
     foulsHome?: number
     foulsAway?: number
     bonusFreeThrows?: boolean
-    savePercentageHome?: string
-    savePercentageAway?: string
-    powerplayConversionHome?: string
-    powerplayConversionAway?: string
-    overtimeScore?: string
   }
   topScorers?: Array<{
     playerName: string
@@ -36,8 +73,9 @@ export interface SportStatsContract {
     goalsOrPoints: number
     assists?: number
   }>
+  keyMetrics?: Record<string, string | number>
   deepLinkUrl: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 export interface CrossRepoQueryContract {
@@ -48,6 +86,25 @@ export interface CrossRepoQueryContract {
   matchId?: string
   teamId?: string
   playerId?: string
+}
+
+export interface WeatherForecastContract {
+  venueId?: string
+  venueName?: string
+  coordinates: { latitude: number; longitude: number }
+  kickoffTime: string
+  temperatureC: number
+  feelsLikeC: number
+  windSpeedMs: number
+  windGustMs: number
+  precipitationMmh: number
+  turfCondition: 'dry' | 'slick' | 'frozen' | 'snowy'
+  turfConditionLabelFi: string
+  lightningRiskStatus: 'clear' | 'watch' | 'danger'
+  suspendMatchRecommended: boolean
+  deepLinkUrl: string
+  isCacheFallback: boolean
+  updatedAt?: string
 }
 
 export function parseIncomingCrossRepoQuery(searchParams: URLSearchParams): CrossRepoQueryContract {
@@ -95,6 +152,7 @@ export function buildBasketballStatsContract(detail: {
 }): SportStatsContract {
   return {
     sport: 'basketball',
+    matchOrTeamId: detail.matchId,
     matchId: detail.matchId,
     homeTeamName: detail.homeTeamName,
     awayTeamName: detail.awayTeamName,
@@ -115,7 +173,12 @@ export function buildBasketballStatsContract(detail: {
       team: l.teamName,
       goalsOrPoints: l.points,
     })),
-    deepLinkUrl: `https://basketball-stats-byu.pages.dev/match/${encodeURIComponent(detail.matchId)}?embed=true`,
+    keyMetrics: {
+      quarters: detail.quarters.length,
+      foulsHome: detail.teamFoulsHome,
+      foulsAway: detail.teamFoulsAway,
+    },
+    deepLinkUrl: `https://basketball-stats-byu.pages.dev/#/match/${encodeURIComponent(detail.matchId)}?embed=true`,
     updatedAt: new Date().toISOString(),
   }
 }

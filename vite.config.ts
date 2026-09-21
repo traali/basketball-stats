@@ -23,6 +23,7 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(buildTime),
   },
   plugins: [react()],
+  base: './',
   server: { headers: webmcpHeaders },
   preview: { headers: webmcpHeaders },
 })
