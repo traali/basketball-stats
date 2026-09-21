@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import type { BasketStandingRow } from '../types/basketball'
 
 interface BasketStandingsTableProps {
@@ -5,7 +6,16 @@ interface BasketStandingsTableProps {
   highlightTeamId?: string
 }
 
+function formClass(f: 'V' | 'T' | 'H') {
+  if (f === 'V') return 'bg-emerald-500/20 text-emerald-400'
+  if (f === 'T') return 'bg-amber-500/20 text-amber-400'
+  return 'bg-rose-500/20 text-rose-400'
+}
+
 export function BasketStandingsTable({ standings, highlightTeamId }: BasketStandingsTableProps) {
+  const navigate = useNavigate()
+  const showDraws = standings.some((row) => (row.draws || 0) > 0)
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -24,6 +34,7 @@ export function BasketStandingsTable({ standings, highlightTeamId }: BasketStand
               <th className="py-2.5 px-3">Joukkue</th>
               <th className="py-2.5 px-2 text-center">O</th>
               <th className="py-2.5 px-2 text-center">V</th>
+              {showDraws ? <th className="py-2.5 px-2 text-center">T</th> : null}
               <th className="py-2.5 px-2 text-center">H</th>
               <th className="py-2.5 px-3 text-center">Korit</th>
               <th className="py-2.5 px-2 text-center">Ero</th>
@@ -37,12 +48,16 @@ export function BasketStandingsTable({ standings, highlightTeamId }: BasketStand
               return (
                 <tr
                   key={row.teamId}
-                  className={`transition-colors ${isHighlighted ? 'bg-amber-500/10 font-bold' : 'hover:bg-slate-800/30'}`}
+                  className={`transition-colors cursor-pointer ${isHighlighted ? 'bg-amber-500/10 font-bold' : 'hover:bg-slate-800/30'}`}
+                  onClick={() => row.teamId && navigate(`/team/${row.teamId}`)}
                 >
                   <td className="py-2.5 px-3 text-center font-mono text-slate-400">{row.rank}</td>
-                  <td className="py-2.5 px-3 font-semibold text-white whitespace-nowrap">{row.teamName}</td>
+                  <td className="py-2.5 px-3 font-semibold text-white whitespace-nowrap hover:text-[#6FFFE9]">{row.teamName}</td>
                   <td className="py-2.5 px-2 text-center font-mono text-slate-300">{row.matchesPlayed}</td>
                   <td className="py-2.5 px-2 text-center font-mono text-emerald-400">{row.wins}</td>
+                  {showDraws ? (
+                    <td className="py-2.5 px-2 text-center font-mono text-amber-400">{row.draws || 0}</td>
+                  ) : null}
                   <td className="py-2.5 px-2 text-center font-mono text-rose-400">{row.losses}</td>
                   <td className="py-2.5 px-3 text-center font-mono text-slate-300">
                     {row.pointsFor} - {row.pointsAgainst}
@@ -58,9 +73,7 @@ export function BasketStandingsTable({ standings, highlightTeamId }: BasketStand
                       {row.form.map((f, i) => (
                         <span
                           key={i}
-                          className={`w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center ${
-                            f === 'W' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                          }`}
+                          className={`w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center ${formClass(f)}`}
                         >
                           {f}
                         </span>

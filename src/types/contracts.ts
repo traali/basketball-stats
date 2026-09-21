@@ -54,11 +54,22 @@ export function parseIncomingCrossRepoQuery(searchParams: URLSearchParams): Cros
   const matchId =
     searchParams.get('match') ||
     searchParams.get('matchId') ||
+    searchParams.get('match_id') ||
     searchParams.get('game') ||
     searchParams.get('gameId') ||
+    searchParams.get('game_id') ||
     undefined
-  const teamId = searchParams.get('team') || searchParams.get('teamId') || undefined
-  const playerId = searchParams.get('player') || searchParams.get('playerId') || undefined
+  const teamId =
+    searchParams.get('team') ||
+    searchParams.get('teamId') ||
+    searchParams.get('team_id') ||
+    searchParams.get('joukkue') ||
+    undefined
+  const playerId =
+    searchParams.get('player') ||
+    searchParams.get('playerId') ||
+    searchParams.get('player_id') ||
+    undefined
 
   return {
     theme: searchParams.get('theme') || undefined,

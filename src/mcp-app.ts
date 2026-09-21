@@ -257,9 +257,9 @@ export function registerBasketballWebMCP(): ModelContextRegistry | undefined {
     execute: async ({ category }) => ({
       category: (category as string) || 'U14 Pojat SM-sarja',
       teams: [
-        { rank: 1, team: 'Tapiolan Honka', played: 10, won: 9, lost: 1, points: 18, diff: '+124', streak: 'W5' },
-        { rank: 2, team: 'Helsingin NMKY', played: 10, won: 8, lost: 2, points: 16, diff: '+98', streak: 'W2' },
-        { rank: 3, team: 'Leppävaaran Pyrintö', played: 10, won: 6, lost: 4, points: 12, diff: '+35', streak: 'L1' },
+        { rank: 1, team: 'Tapiolan Honka', played: 10, won: 9, lost: 1, points: 18, diff: '+124', streak: 'V5' },
+        { rank: 2, team: 'Helsingin NMKY', played: 10, won: 8, lost: 2, points: 16, diff: '+98', streak: 'V2' },
+        { rank: 3, team: 'Leppävaaran Pyrintö', played: 10, won: 6, lost: 4, points: 12, diff: '+35', streak: 'H1' },
       ],
       pointsRule: '2 points for win, 0 points for loss',
     }),
