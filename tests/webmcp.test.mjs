@@ -83,4 +83,17 @@ describe('native Chrome/ChatGPT consumer', () => {
       delete globalThis.document
     }
   })
+
+  it('second connect keeps polyfill mode and does not report native', () => {
+    globalThis.document = {}
+    try {
+      const first = connectModelContext()
+      assert.equal(first.mode, 'polyfill')
+      const second = connectModelContext()
+      assert.equal(second.mode, 'polyfill')
+      assert.equal(second.mc, first.mc)
+    } finally {
+      delete globalThis.document
+    }
+  })
 })
