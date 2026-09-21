@@ -8,7 +8,7 @@ import { CourtMark } from '../components/CourtMark'
 const QUICK = ['Honka', 'ETEK', 'HNMKY', 'U14', 'U16', 'Helsinki']
 
 const POPULAR: Array<{ kind: 'team' | 'search'; id: string; name: string; hint: string }> = [
-  { kind: 'team', id: '20053', name: 'Tapiolan Honka', hint: 'U14 · team 20053' },
+  { kind: 'search', id: 'Tapiolan Honka', name: 'Tapiolan Honka', hint: 'Hae seuroista' },
   { kind: 'search', id: 'HNMKY', name: 'HNMKY', hint: 'Hae seuroista' },
   { kind: 'search', id: 'ETEK', name: 'ETEK', hint: 'Hae seuroista' },
   { kind: 'search', id: 'ToPo', name: 'ToPo Juniorit', hint: 'Hae seuroista' },

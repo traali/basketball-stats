@@ -30,7 +30,7 @@ export function BrowsePage() {
       if (needle && !hay.includes(needle)) return false
       if (filter === 'etela') return hay.includes('etelä') || hay.includes('etela') || c.competitionId.includes('es')
       if (filter === 'liiga') return hay.includes('liiga')
-      if (filter === 'nuoret') return /u1[0-9]|p1[0-9]|junior|pojat|tytöt|tytot/i.test(hay)
+      if (filter === 'nuoret') return /u1[0-9]|p1[0-9]|junior|pojat|tytöt|tytot|nuor|alue/i.test(hay)
       return true
     })
   }, [comps, filter, q])
