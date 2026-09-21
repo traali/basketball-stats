@@ -22,9 +22,9 @@ export function CategoryPage() {
       <button type="button" onClick={() => navigate(`/competition/${compId}`)} className="text-xs text-slate-400 flex items-center gap-1">
         <ArrowLeft className="w-3.5 h-3.5" /> Kilpailu
       </button>
-      <h1 className="text-2xl font-black">{groups[0]?.categoryName || 'Sarja'}</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{groups[0]?.categoryName || 'Sarja'}</h1>
       {loading ? (
-        <div className="animate-pulse h-24 rounded-2xl bg-[#1C2541]" />
+        <div className="animate-pulse h-24 rounded-2xl bg-court" />
       ) : (
         <div className="space-y-2">
           {groups.map((g) => (
@@ -32,9 +32,9 @@ export function CategoryPage() {
               key={g.groupId}
               type="button"
               onClick={() => navigate(`/group/${compId}/${catId}/${g.groupId}`)}
-              className="w-full text-left rounded-xl border border-slate-800 bg-[#1C2541] p-4 flex items-center gap-3 hover:border-[#5BC0BE]/50"
+              className="w-full text-left rounded-xl border border-hairline bg-court p-4 flex items-center gap-3 hover:border-accent/50"
             >
-              <ListTree className="w-4 h-4 text-[#5BC0BE]" />
+              <ListTree className="w-4 h-4 text-accent" />
               <div>
                 <p className="text-sm font-semibold">{g.groupName}</p>
                 <p className="text-[11px] text-slate-400">{g.teamCount ? `${g.teamCount} joukkuetta` : 'Avaa taulukko'}</p>

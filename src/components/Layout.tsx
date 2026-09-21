@@ -18,7 +18,18 @@ export function Layout() {
     }
 
     const p = window.location.pathname
-    if (!window.location.hash && (p.startsWith('/match/') || p.startsWith('/team/') || p.startsWith('/player/') || p.startsWith('/search') || p.startsWith('/browse') || p.startsWith('/club/') || p.startsWith('/competition/') || p.startsWith('/favorites') || p.startsWith('/group/'))) {
+    if (
+      !window.location.hash &&
+      (p.startsWith('/match/') ||
+        p.startsWith('/team/') ||
+        p.startsWith('/player/') ||
+        p.startsWith('/search') ||
+        p.startsWith('/browse') ||
+        p.startsWith('/club/') ||
+        p.startsWith('/competition/') ||
+        p.startsWith('/favorites') ||
+        p.startsWith('/group/'))
+    ) {
       window.location.replace('/#' + p + window.location.search)
       return
     }
@@ -34,12 +45,14 @@ export function Layout() {
   }, [isEmbed])
 
   return (
-    <div className={`min-h-screen bg-[#0B132B] text-slate-100 flex flex-col justify-between ${
-      isEmbed ? 'p-2' : 'pb-20'
-    }`}>
+    <div
+      className={`min-h-dvh bg-canvas text-slate-100 flex flex-col justify-between ${
+        isEmbed ? 'p-2' : 'pb-[calc(4.5rem+env(safe-area-inset-bottom))]'
+      }`}
+    >
       <div className="flex-1 w-full">
         {!isEmbed && <Header isEmbed={isEmbed} />}
-        <main className="py-2">
+        <main>
           <Outlet />
         </main>
       </div>

@@ -14,10 +14,10 @@ export const BasketScheduleView: React.FC<BasketScheduleViewProps> = ({
   currentMatchId,
 }) => {
   return (
-    <div className="bg-[#1C2541] rounded-2xl p-5 border border-slate-700/60 shadow-xl">
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-700/50">
+    <div className="bg-court rounded-2xl p-5 border border-hairline shadow-xl">
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-hairline">
         <h3 className="font-bold text-sm tracking-wide text-slate-100 flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-[#5BC0BE]" />
+          <Calendar className="w-4 h-4 text-accent" />
           Kauden Otteluohjelma ({fixtures.length})
         </h3>
         <span className="text-xs text-slate-400">Valitse ottelu</span>
@@ -32,8 +32,8 @@ export const BasketScheduleView: React.FC<BasketScheduleViewProps> = ({
               onClick={() => onSelectMatch(f.matchId)}
               className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                 isSelected
-                  ? 'bg-[#3A506B]/40 border-[#5BC0BE] shadow-md'
-                  : 'bg-[#0B132B]/60 border-slate-800 hover:border-slate-700'
+                  ? 'bg-lane/40 border-accent shadow-md'
+                  : 'bg-canvas/60 border-hairline hover:border-slate-700'
               }`}
             >
               <div className="flex flex-col">
@@ -45,7 +45,7 @@ export const BasketScheduleView: React.FC<BasketScheduleViewProps> = ({
                 <div className="font-bold text-xs sm:text-sm text-slate-200 mt-1">
                   <span>{f.homeTeam}</span>
                   <span className="text-slate-500 mx-1.5">vs</span>
-                  <span className="text-[#5BC0BE]">{f.awayTeam}</span>
+                  <span className="text-accent">{f.awayTeam}</span>
                 </div>
                 <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-1">
                   <MapPin className="w-3 h-3 text-slate-500" />
@@ -55,7 +55,7 @@ export const BasketScheduleView: React.FC<BasketScheduleViewProps> = ({
 
               <div className="flex items-center gap-3">
                 {f.score ? (
-                  <span className="text-xs sm:text-sm font-black text-slate-100 bg-[#1C2541] px-2.5 py-1 rounded-lg border border-slate-700">
+                  <span className="text-xs sm:text-sm font-black text-slate-100 bg-court px-2.5 py-1 rounded-lg border border-slate-700">
                     {f.score}
                   </span>
                 ) : (

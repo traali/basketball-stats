@@ -101,7 +101,7 @@ export function MatchPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-slate-400">
-        <Loader2 className="w-8 h-8 animate-spin text-[#5BC0BE]" />
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
         <p className="text-sm">Ladataan koripallo-ottelun tilastoja...</p>
       </div>
     )
@@ -114,7 +114,7 @@ export function MatchPage() {
         <button
           type="button"
           onClick={() => navigate('/')}
-          className="px-4 py-2 rounded-xl bg-[#3A506B] text-[#6FFFE9] text-xs font-bold"
+          className="btn-ice"
         >
           Palaa etusivulle
         </button>
@@ -156,7 +156,7 @@ export function MatchPage() {
         <button
           type="button"
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#1C2541] hover:bg-slate-800 text-slate-300 text-xs font-bold transition-colors border border-slate-700/80"
+          className="flex items-center gap-2 min-h-11 px-3 rounded-xl bg-court hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-colors border border-hairline"
         >
           <ArrowLeft className="w-4 h-4" />
           Takaisin
@@ -166,7 +166,7 @@ export function MatchPage() {
             <button
               type="button"
               onClick={() => navigate(`/team/${match.homeTeamId}`)}
-              className="text-xs text-[#6FFFE9] hover:underline font-semibold truncate"
+              className="text-xs text-ice hover:underline font-semibold truncate"
             >
               {match.homeTeamName} →
             </button>
@@ -175,7 +175,7 @@ export function MatchPage() {
             <button
               type="button"
               onClick={() => navigate(`/team/${match.awayTeamId}`)}
-              className="text-xs text-[#6FFFE9] hover:underline font-semibold truncate"
+              className="text-xs text-ice hover:underline font-semibold truncate"
             >
               {match.awayTeamName} →
             </button>
@@ -199,8 +199,8 @@ export function MatchPage() {
               className={clsx(
                 'shrink-0 px-3 py-2 rounded-xl border text-[11px] font-semibold',
                 g.matchId === match.matchId
-                  ? 'border-[#5BC0BE] bg-[#3A506B] text-[#6FFFE9]'
-                  : 'border-slate-800 bg-[#1C2541] text-slate-300',
+                  ? 'border-accent bg-lane text-ice'
+                  : 'border-hairline bg-court text-slate-300',
               )}
             >
               {(g.time || '').slice(0, 5) || '–'} · {g.homeTeam} {g.score || 'vs'} {g.awayTeam}
@@ -209,7 +209,7 @@ export function MatchPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-1.5 pb-1 border-b border-slate-800 text-xs font-semibold">
+      <div className="flex flex-wrap items-center gap-1.5 pb-1 border-b border-hairline text-xs font-semibold">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -218,7 +218,7 @@ export function MatchPage() {
             className={clsx(
               'flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap',
               activeTab === tab.id
-                ? 'bg-[#3A506B] text-[#6FFFE9] shadow-md'
+                ? 'bg-lane text-ice shadow-md'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60',
             )}
           >

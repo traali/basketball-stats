@@ -27,11 +27,11 @@ export function GroupPage() {
         <ArrowLeft className="w-3.5 h-3.5" /> Sarja
       </button>
       {loading ? (
-        <div className="animate-pulse h-40 rounded-2xl bg-[#1C2541]" />
+        <div className="animate-pulse h-40 rounded-2xl bg-court" />
       ) : group ? (
         <>
           <div>
-            <h1 className="text-2xl font-black">{group.groupName}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{group.groupName}</h1>
             <p className="text-xs text-slate-400">{group.competitionName} · {group.categoryName}</p>
           </div>
           <BasketStandingsTable standings={standings} />
@@ -43,7 +43,7 @@ export function GroupPage() {
                   key={m.matchId}
                   type="button"
                   onClick={() => navigate(`/match/${m.matchId}`)}
-                  className="w-full text-left rounded-xl border border-slate-800 bg-[#1C2541] px-3 py-3 hover:border-[#5BC0BE]/50"
+                  className="w-full text-left rounded-xl border border-hairline bg-court px-3 py-3 hover:border-accent/50"
                 >
                   <p className="text-sm font-semibold">{m.homeTeam} – {m.awayTeam}</p>
                   <p className="text-[11px] text-slate-400">{m.date} {m.time?.slice(0, 5)}</p>
@@ -59,10 +59,10 @@ export function GroupPage() {
                   key={m.matchId}
                   type="button"
                   onClick={() => navigate(`/match/${m.matchId}`)}
-                  className="w-full text-left rounded-xl border border-slate-800 bg-[#1C2541] px-3 py-3 hover:border-[#5BC0BE]/50"
+                  className="w-full text-left rounded-xl border border-hairline bg-court px-3 py-3 hover:border-accent/50"
                 >
                   <p className="text-sm font-semibold">{m.homeTeam} – {m.awayTeam}</p>
-                  <p className="text-[11px] text-[#6FFFE9] font-mono">{m.scoreHome}–{m.scoreAway}</p>
+                  <p className="text-[11px] text-ice font-mono">{m.scoreHome}–{m.scoreAway}</p>
                 </button>
               ))}
             </section>

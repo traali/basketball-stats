@@ -4,8 +4,7 @@ import './index.css'
 import App from './App'
 import { registerBasketballWebMCP } from './mcp-app'
 
-// Register WebMCP browser tools for AI agents (navigator.modelContext & document.modelContext)
-registerBasketballWebMCP()
+void registerBasketballWebMCP()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

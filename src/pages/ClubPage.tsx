@@ -39,7 +39,7 @@ export function ClubPage() {
           <button type="button" onClick={() => navigate('/search')} className="text-xs text-slate-400 flex items-center gap-1 mb-2">
             <ArrowLeft className="w-3.5 h-3.5" /> Haku
           </button>
-          <h1 className="text-2xl font-black">{club.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{club.name}</h1>
           <p className="text-xs text-slate-400">{[club.cityName, club.venueName].filter(Boolean).join(' · ')}</p>
         </div>
         <button
@@ -58,7 +58,7 @@ export function ClubPage() {
               key={t.teamId}
               type="button"
               onClick={() => navigate(`/team/${t.teamId}`)}
-              className="w-full text-left rounded-xl border border-slate-800 bg-[#1C2541] px-3 py-3 hover:border-[#5BC0BE]/50"
+              className="w-full text-left rounded-xl border border-hairline bg-court px-3 py-3 hover:border-accent/50"
             >
               <p className="text-sm font-semibold">{t.teamName}</p>
               <p className="text-[11px] text-slate-400">{t.categoryName || 'Joukkue'}</p>
