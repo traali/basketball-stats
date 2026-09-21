@@ -52,7 +52,14 @@ async function basketGet(path: string): Promise<Record<string, unknown> | null> 
       const text = await res.text()
       const i = text.indexOf('{')
       if (i < 0) continue
-      return JSON.parse(text.slice(i))
+      const data = JSON.parse(text.slice(i)) as Record<string, unknown> & {
+        call?: { status?: string }
+        error?: string
+      }
+      const status = String(data?.call?.status || '').toLowerCase()
+      if (data.error === 'upstream') continue
+      if (status && status !== 'ok') continue
+      return data
     } catch {
       /* try next */
     }

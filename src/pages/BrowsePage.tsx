@@ -61,6 +61,12 @@ export function BrowsePage() {
       </div>
       {loading ? (
         <div className="animate-pulse h-24 rounded-2xl bg-court" />
+      ) : visible.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          {comps.length === 0
+            ? 'Sarjoja ei saatu Basket.fistä. Kokeile hetken päästä uudelleen.'
+            : 'Ei kilpailuja tällä suodattimella.'}
+        </p>
       ) : (
         <div className="space-y-2">
           {visible.map((c) => (

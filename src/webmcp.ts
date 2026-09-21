@@ -67,9 +67,12 @@ export type NativeModelContext = {
 
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/
 
+export const POLYFILL_MARK = Symbol.for('webmcp.polyfill')
+
 type StoredTool = ModelContextTool & { origin: string }
 
 export class WebMcpPolyfill extends EventTarget {
+  readonly [POLYFILL_MARK] = true
   #tools = new Map<string, StoredTool>()
 
   async registerTool(tool: ModelContextTool, options: RegisterToolOptions = {}): Promise<void> {
@@ -166,12 +169,16 @@ export class WebMcpPolyfill extends EventTarget {
 }
 
 /** Native if the host object exposes registerTool. Do not require getTools or EventTarget. */
+export function isOurPolyfill(value: unknown): value is WebMcpPolyfill {
+  return Boolean(value && typeof value === 'object' && POLYFILL_MARK in (value as object))
+}
+
 export function getNativeModelContext(): NativeModelContext | null {
   const doc = globalThis.document as (Document & { modelContext?: NativeModelContext }) | undefined
   const nav = globalThis.navigator as (Navigator & { modelContext?: NativeModelContext }) | undefined
   if (!doc) return null
   for (const mc of [doc.modelContext, nav?.modelContext]) {
-    if (mc && typeof mc.registerTool === 'function') return mc
+    if (mc && typeof mc.registerTool === 'function' && !isOurPolyfill(mc)) return mc
   }
   return null
 }
@@ -222,9 +229,15 @@ export function connectModelContext(): { mode: WebMcpMode; mc: NativeModelContex
     return { mode: 'native', mc: native }
   }
 
+  const doc = globalThis.document as (Document & { modelContext?: NativeModelContext }) | undefined
+  const existing = doc?.modelContext
+  if (isOurPolyfill(existing)) {
+    bindMessageBridge(existing)
+    return { mode: 'polyfill', mc: existing }
+  }
+
   const poly = new WebMcpPolyfill()
   const host = asHost(poly)
-  const doc = globalThis.document as (Document & { modelContext?: NativeModelContext }) | undefined
   if (!doc) {
     return { mode: 'unavailable', mc: host }
   }
