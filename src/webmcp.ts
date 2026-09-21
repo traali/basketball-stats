@@ -1,15 +1,18 @@
 /**
- * Spec-shaped WebMCP (document.modelContext).
- * Draft: https://webmachinelearning.github.io/webmcp (17 Sep 2026)
+ * Native-first WebMCP.
  *
- * Uses the native browser API when present. Otherwise installs an EventTarget
- * polyfill that matches registerTool / getTools / executeTool.
+ * Chrome (origin trial / chrome://flags/#enable-webmcp-testing) and ChatGPT
+ * Desktop/Sites read the browser host object `document.modelContext`.
+ * Never replace that getter — a JS polyfill is invisible to those consumers.
+ *
+ * Spec: https://webmachinelearning.github.io/webmcp
  */
 
 export type JsonSchema = {
   type?: string
   properties?: Record<string, unknown>
   required?: string[]
+  additionalProperties?: boolean
   [key: string]: unknown
 }
 
@@ -41,6 +44,25 @@ export type RegisteredTool = {
 export type RegisterToolOptions = {
   signal?: AbortSignal
   exposedTo?: string[]
+}
+
+export type WebMcpMode = 'native' | 'polyfill' | 'unavailable'
+
+export type WebMcpStatus = {
+  mode: WebMcpMode
+  consumer: 'chrome' | 'chatgpt' | 'unknown' | 'none'
+  tools: string[]
+  error?: string
+}
+
+export type NativeModelContext = {
+  registerTool: (tool: ModelContextTool, options?: RegisterToolOptions) => Promise<unknown>
+  getTools?: (options?: unknown) => Promise<unknown>
+  executeTool?: (tool: string | RegisteredTool | unknown, input?: unknown, options?: unknown) => Promise<unknown>
+  listTools?: () => Promise<{ tools: RegisteredTool[] }>
+  callTool?: (params: { name: string; arguments?: Record<string, unknown> }) => Promise<unknown>
+  addEventListener?: EventTarget['addEventListener']
+  removeEventListener?: EventTarget['removeEventListener']
 }
 
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/
@@ -92,11 +114,16 @@ export class WebMcpPolyfill extends EventTarget {
   }
 
   async executeTool(
-    tool: RegisteredTool | string,
+    tool: RegisteredTool | string | unknown,
     inputObject: unknown = {},
     options: { signal?: AbortSignal } = {},
   ): Promise<string> {
-    const name = typeof tool === 'string' ? tool : tool?.name
+    const name =
+      typeof tool === 'string'
+        ? tool
+        : tool && typeof tool === 'object' && 'name' in tool
+          ? String((tool as { name: string }).name)
+          : undefined
     const stored = name ? this.#tools.get(name) : undefined
     if (!stored) {
       return Promise.reject(new DOMException(`Tool '${String(name)}' not found`, 'NotFoundError'))
@@ -118,8 +145,7 @@ export class WebMcpPolyfill extends EventTarget {
   }
 
   async listTools() {
-    const tools = await this.getTools()
-    return { tools }
+    return { tools: await this.getTools() }
   }
 
   async callTool(params: { name: string; arguments?: Record<string, unknown> }) {
@@ -139,91 +165,164 @@ export class WebMcpPolyfill extends EventTarget {
   }
 }
 
-export function isNativeModelContext(value: unknown): value is WebMcpPolyfill {
-  return Boolean(
-    value &&
-      typeof value === 'object' &&
-      value instanceof EventTarget &&
-      typeof (value as WebMcpPolyfill).registerTool === 'function' &&
-      typeof (value as WebMcpPolyfill).getTools === 'function',
-  )
+/** Native if the host object exposes registerTool. Do not require getTools or EventTarget. */
+export function getNativeModelContext(): NativeModelContext | null {
+  const doc = globalThis.document as (Document & { modelContext?: NativeModelContext }) | undefined
+  const nav = globalThis.navigator as (Navigator & { modelContext?: NativeModelContext }) | undefined
+  if (!doc) return null
+  for (const mc of [doc.modelContext, nav?.modelContext]) {
+    if (mc && typeof mc.registerTool === 'function') return mc
+  }
+  return null
+}
+
+export function detectWebMcpConsumer(): WebMcpStatus['consumer'] {
+  const nav = globalThis.navigator
+  if (!nav) return 'none'
+  const ua = nav.userAgent || ''
+  const brands =
+    (nav as Navigator & { userAgentData?: { brands?: Array<{ brand: string }> } }).userAgentData?.brands || []
+  const brandStr = brands.map((b) => b.brand).join(' ')
+  if (/ChatGPT|OpenAI/i.test(ua) || /ChatGPT|OpenAI/i.test(brandStr)) return 'chatgpt'
+  if (/Chrome\//.test(ua) && !/Edg\//.test(ua) && !/OPR\//.test(ua)) return 'chrome'
+  if (/Edg\//.test(ua)) return 'chrome'
+  return 'unknown'
+}
+
+export function isNativeModelContext(value: unknown): value is NativeModelContext {
+  return Boolean(value && typeof value === 'object' && typeof (value as NativeModelContext).registerTool === 'function')
 }
 
 let messageHandler: ((event: MessageEvent) => void) | null = null
+let lastStatus: WebMcpStatus = { mode: 'unavailable', consumer: 'none', tools: [] }
 
-export function installModelContext(): WebMcpPolyfill | undefined {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return undefined
-
-  const current = (document as Document & { modelContext?: unknown }).modelContext
-  if (isNativeModelContext(current)) {
-    bindMessageBridge(current)
-    aliasNavigator(current)
-    return current
-  }
-
-  const polyfill = new WebMcpPolyfill()
-  try {
-    Object.defineProperty(document, 'modelContext', {
-      value: polyfill,
-      configurable: true,
-      enumerable: true,
-    })
-  } catch {
-    ;(document as Document & { modelContext?: WebMcpPolyfill }).modelContext = polyfill
-  }
-  aliasNavigator(polyfill)
-  bindMessageBridge(polyfill)
-  return polyfill
+export function getWebMcpStatus(): WebMcpStatus {
+  return lastStatus
 }
 
-function aliasNavigator(mc: WebMcpPolyfill) {
-  if (typeof navigator === 'undefined') return
-  const existing = (navigator as Navigator & { modelContext?: unknown }).modelContext
-  if (isNativeModelContext(existing)) return
+export function publishWebMcpStatus(next: WebMcpStatus) {
+  lastStatus = next
+  const win = globalThis.window
+  if (!win) return
+  win.__WEBMCP_STATUS__ = next
+  win.dispatchEvent(new CustomEvent('webmcp:status', { detail: next }))
+}
+
+function asHost(mc: WebMcpPolyfill): NativeModelContext {
+  return mc as unknown as NativeModelContext
+}
+
+/**
+ * Connect to native Chrome/ChatGPT modelContext when present.
+ * Never overwrite a host getter. Polyfill only when the API is absent.
+ */
+export function connectModelContext(): { mode: WebMcpMode; mc: NativeModelContext } {
+  const native = getNativeModelContext()
+  if (native) {
+    return { mode: 'native', mc: native }
+  }
+
+  const poly = new WebMcpPolyfill()
+  const host = asHost(poly)
+  const doc = globalThis.document as (Document & { modelContext?: NativeModelContext }) | undefined
+  if (!doc) {
+    return { mode: 'unavailable', mc: host }
+  }
+  const hostHasGetter = 'modelContext' in doc
+
+  if (!hostHasGetter) {
+    try {
+      Object.defineProperty(doc, 'modelContext', {
+        value: poly,
+        configurable: true,
+        enumerable: true,
+      })
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const after = getNativeModelContext()
+  if (after && after !== poly) {
+    return { mode: 'native', mc: after }
+  }
+
+  if (!hostHasGetter) {
+    aliasNavigatorIfEmpty(host)
+    bindMessageBridge(host)
+    return { mode: 'polyfill', mc: host }
+  }
+
+  bindMessageBridge(host)
+  if (typeof globalThis.window !== 'undefined') {
+    globalThis.window.__WEBMCP_POLYFILL__ = poly
+  }
+  return { mode: 'unavailable', mc: host }
+}
+
+function aliasNavigatorIfEmpty(mc: NativeModelContext) {
+  const nav = globalThis.navigator as (Navigator & { modelContext?: NativeModelContext }) | undefined
+  if (!nav) return
+  const existing = nav.modelContext
+  if (existing && typeof existing.registerTool === 'function') return
   try {
-    Object.defineProperty(navigator, 'modelContext', {
+    Object.defineProperty(nav, 'modelContext', {
       value: mc,
       configurable: true,
       enumerable: true,
     })
   } catch {
-    ;(navigator as Navigator & { modelContext?: WebMcpPolyfill }).modelContext = mc
+    /* host getter */
   }
 }
 
-function bindMessageBridge(mc: WebMcpPolyfill) {
-  if (messageHandler) window.removeEventListener('message', messageHandler)
+function bindMessageBridge(mc: NativeModelContext) {
+  const win = globalThis.window
+  if (!win) return
+  if (messageHandler) win.removeEventListener('message', messageHandler)
   messageHandler = async (event: MessageEvent) => {
-    if (event.origin !== window.location.origin) return
+    if (event.origin !== win.location.origin) return
     const data = event.data
     if (!data || data.type !== 'webmcp:request' || !data.id) return
+    const poly = mc as WebMcpPolyfill
     try {
       if (data.method === 'tools/list' || data.method === 'listTools') {
         const result =
-          typeof mc.listTools === 'function' ? await mc.listTools() : { tools: await mc.getTools() }
-        window.postMessage({ type: 'webmcp:response', id: data.id, result }, window.location.origin)
+          typeof poly.listTools === 'function'
+            ? await poly.listTools()
+            : { tools: typeof mc.getTools === 'function' ? await mc.getTools() : [] }
+        win.postMessage({ type: 'webmcp:response', id: data.id, result }, win.location.origin)
       } else if (data.method === 'tools/call' || data.method === 'callTool') {
         let result: unknown
-        if (typeof mc.callTool === 'function') {
-          result = await mc.callTool(data.params || { name: '', arguments: {} })
-        } else {
-          const tools = await mc.getTools()
+        if (typeof poly.callTool === 'function') {
+          result = await poly.callTool(data.params || { name: '', arguments: {} })
+        } else if (typeof mc.executeTool === 'function') {
+          const tools = typeof mc.getTools === 'function' ? ((await mc.getTools()) as RegisteredTool[]) : []
           const name = data.params?.name as string
-          const tool = tools.find((t) => t.name === name)
-          if (!tool) throw new Error(`Tool '${name}' not found`)
-          const raw = await mc.executeTool(tool, data.params?.arguments || {})
-          const parsed = JSON.parse(raw) as unknown
+          const tool = Array.isArray(tools) ? tools.find((t) => t.name === name) : undefined
+          const raw = await mc.executeTool(tool || name, data.params?.arguments || {})
+          const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
           result =
             parsed && typeof parsed === 'object' && 'content' in (parsed as object)
               ? parsed
-              : { content: [{ type: 'text', text: typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2) }] }
+              : { content: [{ type: 'text', text: JSON.stringify(parsed) }] }
+        } else {
+          throw new Error('executeTool not available')
         }
-        window.postMessage({ type: 'webmcp:response', id: data.id, result }, window.location.origin)
+        win.postMessage({ type: 'webmcp:response', id: data.id, result }, win.location.origin)
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'WebMCP execution failed'
-      window.postMessage({ type: 'webmcp:response', id: data.id, error: { message } }, window.location.origin)
+      win.postMessage({ type: 'webmcp:response', id: data.id, error: { message } }, win.location.origin)
     }
   }
-  window.addEventListener('message', messageHandler)
+  win.addEventListener('message', messageHandler)
+}
+
+declare global {
+  interface Window {
+    __WEBMCP_STATUS__?: WebMcpStatus
+    __WEBMCP_POLYFILL__?: WebMcpPolyfill
+    __WEBMCP_READY__?: Promise<unknown>
+  }
 }
