@@ -922,6 +922,7 @@ export async function searchDiscovery(query: string): Promise<DiscoveryHit[]> {
 
   const comps = await fetchBasketCompetitions().catch(() => [])
   const looksLikePerson = tokens.length >= 2 && tokens.every((t) => /^[a-zåäö]{2,}$/i.test(t))
+  const clubOrTeamHits = hits.filter((h) => h.kind === 'club' || h.kind === 'team').length
   if (!looksLikePerson) {
     for (const c of comps) {
       const hay = normalizeSearch(`${c.competitionName} ${c.organiser || ''} ${c.locationName || ''}`)
@@ -935,43 +936,48 @@ export async function searchDiscovery(query: string): Promise<DiscoveryHit[]> {
       }
     }
 
-    const catSources = comps
-      .filter((c) => (c.competitionId || '').includes('2026') || (c.seasonId || '').includes('2026'))
-      .slice(0, 4)
-    const catLists = await Promise.all(catSources.map((c) => fetchBasketCategories(c.competitionId).catch(() => [])))
-    for (const list of catLists) {
-      for (const cat of list) {
-        if (!normalizeSearch(cat.categoryName).includes(q) && !tokens.some((t) => normalizeSearch(cat.categoryName).includes(t))) {
-          continue
+    const needDeepScan = clubOrTeamHits < 6
+    if (needDeepScan) {
+      const catSources = comps
+        .filter((c) => (c.competitionId || '').includes('2026') || (c.seasonId || '').includes('2026'))
+        .slice(0, 4)
+      const catLists = await Promise.all(catSources.map((c) => fetchBasketCategories(c.competitionId).catch(() => [])))
+      for (const list of catLists) {
+        for (const cat of list) {
+          if (!normalizeSearch(cat.categoryName).includes(q) && !tokens.some((t) => normalizeSearch(cat.categoryName).includes(t))) {
+            continue
+          }
+          hits.push({
+            kind: 'category',
+            id: `${cat.competitionId}::${cat.categoryId}`,
+            title: cat.categoryName,
+            subtitle: cat.competitionName,
+          })
         }
-        hits.push({
-          kind: 'category',
-          id: `${cat.competitionId}::${cat.categoryId}`,
-          title: cat.categoryName,
-          subtitle: cat.competitionName,
-        })
       }
     }
   }
 
-  const playerTeamIds = ['20053', ...[...seenTeams].slice(0, 4)]
-  const profiles = await Promise.all(
-    [...new Set(playerTeamIds)].slice(0, 8).map((id) => fetchBasketTeamProfile(id).catch(() => null)),
-  )
-  const seenPlayers = new Set<string>()
-  for (const team of profiles) {
-    if (!team) continue
-    for (const p of team.players) {
-      const hay = normalizeSearch(p.fullName)
-      if (!hay.includes(q) && !tokens.some((t) => hay.includes(t))) continue
-      if (!p.playerId || seenPlayers.has(p.playerId)) continue
-      seenPlayers.add(p.playerId)
-      hits.push({
-        kind: 'player',
-        id: p.playerId,
-        title: p.fullName,
-        subtitle: team.teamName,
-      })
+  if (looksLikePerson || clubOrTeamHits < 6) {
+    const playerTeamIds = [...seenTeams].slice(0, 4)
+    const profiles = await Promise.all(
+      [...new Set(playerTeamIds)].slice(0, 8).map((id) => fetchBasketTeamProfile(id).catch(() => null)),
+    )
+    const seenPlayers = new Set<string>()
+    for (const team of profiles) {
+      if (!team) continue
+      for (const p of team.players) {
+        const hay = normalizeSearch(p.fullName)
+        if (!hay.includes(q) && !tokens.some((t) => hay.includes(t))) continue
+        if (!p.playerId || seenPlayers.has(p.playerId)) continue
+        seenPlayers.add(p.playerId)
+        hits.push({
+          kind: 'player',
+          id: p.playerId,
+          title: p.fullName,
+          subtitle: team.teamName,
+        })
+      }
     }
   }
 
