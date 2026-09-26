@@ -1,6 +1,6 @@
 # Basketball Stats
 
-UI contract for other models: `docs/UI_SPEC.md` (signed off 2026-09-26). Read section 0 before changing navigation, standings letters, or favorites.
+UI contract for other models: `docs/UI_SPEC.md` (signed off 2026-09-26). Every component file: `docs/UI_COMPONENTS.md`. Read section 0 before changing navigation, standings letters, or favorites.
 
 Live: https://basketball-stats-byu.pages.dev
 Data: Basket.fi TASO. No hardcoded match.

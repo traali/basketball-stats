@@ -5,6 +5,7 @@ Live: https://basketball-stats-byu.pages.dev
 Job: find a Basket.fi team, series, or player and read live TASO numbers. No hardcoded match.
 
 If this doc and the code disagree, the code wins. Update this file in the same commit.
+Every component file: [UI_COMPONENTS.md](./UI_COMPONENTS.md).
 
 ## 0. Sign-off
 
