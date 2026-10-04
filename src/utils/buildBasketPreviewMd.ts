@@ -5,8 +5,10 @@ export function buildBasketPreviewMd(opts: {
   standings?: BasketStandingRow[]
 }): string {
   const m = opts.match
-  const upcoming = m.quarters.every((q) => q.scoreHome === 0 && q.scoreAway === 0) && m.scoreHome === 0 && m.scoreAway === 0
-  const qStr = m.quarters.map((q) => `Q${q.quarter} ${q.scoreHome}–${q.scoreAway}`).join(', ')
+  const upcoming = m.phase === 'upcoming'
+  const qStr = upcoming
+    ? ''
+    : m.quarters.map((q) => `Q${q.quarter} ${q.scoreHome}–${q.scoreAway}`).join(', ')
   const table = (opts.standings || [])
     .map((r) => `${r.rank}. ${r.teamName}  ${r.matchesPlayed}ott ${r.wins}V ${r.losses}H  ${r.pointsFor}–${r.pointsAgainst}  ${r.totalPoints}p`)
     .join('\n')

@@ -318,18 +318,22 @@ export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDeta
 
     const m = data.match as Record<string, unknown>
 
-    // Quarters calculation
-    const quarters: BasketQuarterScore[] = [
-      { quarter: 1, scoreHome: Number(m.p1s_A || 0), scoreAway: Number(m.p1s_B || 0) },
-      { quarter: 2, scoreHome: Number(m.p2s_A || 0), scoreAway: Number(m.p2s_B || 0) },
-      { quarter: 3, scoreHome: Number(m.p3s_A || 0), scoreAway: Number(m.p3s_B || 0) },
-      { quarter: 4, scoreHome: Number(m.p4s_A || 0), scoreAway: Number(m.p4s_B || 0) },
-    ]
+    const quarterPair = (homeRaw: unknown, awayRaw: unknown) => {
+      const blank = (v: unknown) => v == null || String(v).trim() === ''
+      if (blank(homeRaw) && blank(awayRaw)) return null
+      const scoreHome = blank(homeRaw) ? 0 : Number(homeRaw)
+      const scoreAway = blank(awayRaw) ? 0 : Number(awayRaw)
+      if (!Number.isFinite(scoreHome) || !Number.isFinite(scoreAway)) return null
+      return { scoreHome, scoreAway }
+    }
+    const quarters: BasketQuarterScore[] = []
+    ;([1, 2, 3, 4] as const).forEach((quarter) => {
+      const pair = quarterPair(m[`p${quarter}s_A`], m[`p${quarter}s_B`])
+      if (pair) quarters.push({ quarter, ...pair })
+    })
 
-    const hasOvertime = Boolean(m.p5s_A || m.p5s_B)
-    const overtimeScore = hasOvertime
-      ? { scoreHome: Number(m.p5s_A || 0), scoreAway: Number(m.p5s_B || 0) }
-      : undefined
+    const overtimePair = quarterPair(m.p5s_A, m.p5s_B)
+    const overtimeScore = overtimePair ?? undefined
 
     const teamFoulsHome = Number(m.live_fouls_A || 0)
     const teamFoulsAway = Number(m.live_fouls_B || 0)
@@ -351,14 +355,15 @@ export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDeta
     const qAway = quarters.reduce((acc, q) => acc + q.scoreAway, 0)
     const a = Number.isFinite(rawA) ? rawA : qHome
     const b = Number.isFinite(rawB) ? rawB : qAway
-    const zeroZero = a === 0 && b === 0
+    const scoredFinal = Number.isFinite(rawA) && Number.isFinite(rawB) && !(rawA === 0 && rawB === 0)
+    const anyQuarter = quarters.length > 0
     const kickoffFuture = isKickoffUpcoming(date, time)
     const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Helsinki' })
     const phase: BasketMatchDetail['phase'] = live
       ? 'live'
-      : zeroZero && (kickoffFuture || date >= today || date === '')
-        ? 'upcoming'
-        : 'played'
+      : scoredFinal || (anyQuarter && !kickoffFuture && date !== '' && date < today)
+        ? 'played'
+        : 'upcoming'
     const scoreHome = phase === 'upcoming' ? 0 : a
     const scoreAway = phase === 'upcoming' ? 0 : b
 
