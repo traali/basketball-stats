@@ -4,6 +4,7 @@ import { ArrowLeft, Heart } from 'lucide-react'
 import clsx from 'clsx'
 import { fetchBasketPlayer, fetchBasketTeamFixtures, determineSeasonHalf, getSeasonYear } from '../services/basketApi'
 import type { BasketPlayerProfile, BasketTeamFixture } from '../types/basketball'
+import { helsinkiDateISO } from '../utils/matchContext'
 import { useFavorites } from '../hooks/useFavorites'
 
 type Scope = 'syksy' | 'kevat' | 'all'
@@ -24,7 +25,7 @@ export function PlayerPage() {
   const [player, setPlayer] = useState<BasketPlayerProfile | null>(null)
   const [fixtures, setFixtures] = useState<BasketTeamFixture[]>([])
   const [loading, setLoading] = useState(true)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = helsinkiDateISO()
   const defaultHalf: Scope = today.slice(5, 7) >= '08' ? 'syksy' : 'kevat'
   const [half, setHalf] = useState<Scope>(defaultHalf)
   const year = today.slice(0, 4)

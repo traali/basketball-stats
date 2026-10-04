@@ -20,6 +20,10 @@ export function helsinkiStamp(d = new Date()): string {
   return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`
 }
 
+export function helsinkiDateISO(d = new Date()): string {
+  return helsinkiStamp(d).slice(0, 10)
+}
+
 export function isKickoffUpcoming(date: string, time: string, now = new Date()): boolean {
   if (!date) return false
   const clock = formatClock(time) || '00:00'
