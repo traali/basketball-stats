@@ -36,7 +36,7 @@ export function WebMcpBadge() {
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full border uppercase tracking-wider ${
+      className={`hidden sm:inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full border uppercase tracking-wider ${
         native
           ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
           : 'bg-court text-slate-500 border-hairline'

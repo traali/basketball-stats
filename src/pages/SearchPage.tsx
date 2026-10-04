@@ -67,7 +67,7 @@ export function SearchPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           autoFocus={!q}
-          placeholder="Hae Westend, U14, pelaaja tai liitä basket.fi-linkki"
+          placeholder="Hae Honka, ETEK tai liitä basket.fi-linkki"
           className="grow bg-transparent text-white text-sm px-3 py-3 min-h-12 focus:outline-none placeholder:text-slate-500"
         />
         <button type="submit" className="btn-ice mr-1.5 my-1.5">
