@@ -84,7 +84,7 @@ export function Home() {
             Basket.fi
           </span>
         </h1>
-        <p className="text-sm text-slate-400">Hae joukkue, seura, sarja tai pelaaja. Ei kovakoodattua ottelua.</p>
+        <p className="text-sm text-slate-400">Hae joukkueen nimellä. Ottelut ja tulokset tulevat Basket.fi-tulospalvelusta.</p>
       </div>
 
       <form
