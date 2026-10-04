@@ -30,7 +30,7 @@ import { isKickoffUpcoming } from '../utils/matchContext.ts'
 
 const API_BASE = 'https://koripallo-api.torneopal.net/taso/rest'
 const TASO_PROXY = 'https://taso-proxy.sakkoja.workers.dev/basket'
-const BASKET_KEY = 'df8e84j9xtdz269euy3h'
+const BASKET_KEY = import.meta.env.VITE_BASKET_ACCEPT || ''
 
 const reqHeaders = {
   Accept: `json/${BASKET_KEY}`,
