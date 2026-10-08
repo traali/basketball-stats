@@ -6,6 +6,8 @@ import type { BasketGroupDetail, BasketTeamFixture } from '../types/basketball'
 import { BasketStandingsTable } from '../components/BasketStandingsTable'
 import { MatchRow } from '../components/MatchRow'
 import { LoadError } from '../components/LoadError'
+import { FederationLink } from '../components/FederationLink'
+import { federationGroupUrl } from '../utils/federationLinks'
 import { splitFixtures } from '../utils/fixtureGroups'
 
 export function GroupPage() {
@@ -60,6 +62,7 @@ export function GroupPage() {
             <p className="text-xs text-slate-400">
               {group.competitionName} · {group.categoryName}
             </p>
+            <FederationLink href={federationGroupUrl(compId, catId, groupId)} label="Lohko Basket.fi-tulospalvelussa" />
           </div>
           <BasketStandingsTable standings={standings} />
           {(

@@ -1,40 +1,45 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Calendar, Layers, Search, Shield, Trophy, User, Users } from 'lucide-react'
-import { searchDiscovery } from '../services/basketApi'
+import { searchBasketData, type SearchOutcome } from '../services/basketApi'
 import type { DiscoveryHit } from '../types/basketball'
 import { LoadError } from '../components/LoadError'
+import { FavoriteButton } from '../components/FavoriteButton'
+import { useFavorites, type FavKind } from '../hooks/useFavorites'
 
 const CHIPS = ['Honka', 'HNMKY', 'ToPo', 'U14', 'U16', 'Helsinki']
+const EMPTY: SearchOutcome = { hits: [], failed: false }
 
 export function SearchPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  const { favorites } = useFavorites()
   const q = params.get('q') || ''
   const [input, setInput] = useState(q)
-  const [hits, setHits] = useState<DiscoveryHit[]>([])
+  const [result, setResult] = useState<SearchOutcome>(EMPTY)
   const [loading, setLoading] = useState(false)
-  const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
+
+  const favoriteTeams = useMemo(
+    () => favorites.filter((f) => f.kind === 'team').map((f) => ({ id: f.id, name: f.name })),
+    [favorites],
+  )
+  const favKey = favoriteTeams.map((t) => t.id).join(',')
 
   useEffect(() => {
     setInput(q)
     if (!q.trim()) {
-      setHits([])
+      setResult(EMPTY)
       return
     }
     let cancelled = false
     setLoading(true)
-    setFailed(false)
-    searchDiscovery(q)
+    searchBasketData(q, { favoriteTeams })
       .then((res) => {
-        if (!cancelled) setHits(res)
+        if (!cancelled) setResult(res)
       })
       .catch(() => {
-        if (!cancelled) {
-          setHits([])
-          setFailed(true)
-        }
+        if (!cancelled) setResult({ hits: [], failed: true })
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -42,7 +47,9 @@ export function SearchPage() {
     return () => {
       cancelled = true
     }
-  }, [q, attempt])
+    // favoriteTeams is keyed by favKey to avoid re-running on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, attempt, favKey])
 
   const submit = (value: string) => {
     const next = value.trim()
@@ -50,6 +57,7 @@ export function SearchPage() {
     navigate(`/search?q=${encodeURIComponent(next)}`)
   }
 
+  const hits = result.hits
   const grouped = {
     club: hits.filter((h) => h.kind === 'club'),
     team: hits.filter((h) => h.kind === 'team'),
@@ -63,7 +71,9 @@ export function SearchPage() {
     <div className="page-shell">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Haku</h1>
-        <p className="text-xs text-slate-400 mt-1">Joukkue, seura, sarja, pelaaja tai ottelulinkki.</p>
+        <p className="text-xs text-slate-400 mt-1">
+          Seura, joukkue (esim. «LePy U16»), sarja tai pelaaja seuran kanssa (esim. «Pyrintö Virtanen»). Myös Basket.fi-linkki tai tunnus.
+        </p>
       </div>
       <form
         onSubmit={(e) => {
@@ -77,8 +87,9 @@ export function SearchPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           autoFocus={!q}
+          enterKeyHint="search"
           placeholder="Hae seura, joukkue tai pelaaja"
-          className="grow bg-transparent text-white text-sm px-3 py-3 min-h-12 focus:outline-none placeholder:text-slate-500"
+          className="grow bg-transparent text-white text-base px-3 py-3 min-h-12 focus:outline-none placeholder:text-slate-500"
         />
         <button type="submit" className="btn-ice mr-1.5 my-1.5">
           Hae
@@ -92,18 +103,19 @@ export function SearchPage() {
         ))}
       </div>
       {loading ? (
-        <p className="text-sm text-slate-400">Haetaan…</p>
-      ) : failed ? (
+        <p className="text-sm text-slate-400">Haetaan Basket.fi:stä… (pelaajahaku käy läpi seuran kokoonpanot)</p>
+      ) : result.failed ? (
         <LoadError what="Hakutuloksia" onRetry={() => setAttempt((n) => n + 1)} />
       ) : !q ? (
-        <p className="text-sm text-slate-500">Aloita hakemalla seuraa, sarjaa tai pelaajaa.</p>
-      ) : hits.length === 0 ? (
-        <p className="text-sm text-slate-500">Ei osumia haulle «{q}».</p>
+        <p className="text-sm text-slate-500">Aloita hakemalla seuraa, joukkuetta, sarjaa tai pelaajaa.</p>
       ) : (
         <div className="space-y-5">
-          <HitGroup icon={Users} title="Seurat" items={grouped.club} onOpen={(id) => navigate(`/club/${id}`)} />
-          <HitGroup icon={Shield} title="Joukkueet" items={grouped.team} onOpen={(id) => navigate(`/team/${id}`)} />
-          <HitGroup icon={User} title="Pelaajat" items={grouped.player} onOpen={(id) => navigate(`/player/${id}`)} />
+          {hits.length === 0 ? <p className="text-sm text-slate-500">Ei osumia haulle «{q}».</p> : null}
+          {result.hint ? <p className="text-xs text-slate-400 rounded-xl border border-hairline px-3 py-2">{result.hint}</p> : null}
+          <HitGroup icon={Users} title="Seurat" items={grouped.club} fav="club" onOpen={(id) => navigate(`/club/${id}`)} />
+          <HitGroup icon={Shield} title="Joukkueet" items={grouped.team} fav="team" onOpen={(id) => navigate(`/team/${id}`)} />
+          <HitGroup icon={User} title="Pelaajat" items={grouped.player} fav="player" onOpen={(id) => navigate(`/player/${id}`)} />
+          <HitGroup icon={Calendar} title="Ottelut" items={grouped.match} onOpen={(id) => navigate(`/match/${id}`)} />
           <HitGroup icon={Trophy} title="Kilpailut" items={grouped.competition} onOpen={(id) => navigate(`/competition/${id}`)} />
           <HitGroup
             icon={Layers}
@@ -114,7 +126,6 @@ export function SearchPage() {
               if (comp && cat) navigate(`/competition/${comp}/category/${cat}`)
             }}
           />
-          <HitGroup icon={Calendar} title="Ottelut" items={grouped.match} onOpen={(id) => navigate(`/match/${id}`)} />
         </div>
       )}
     </div>
@@ -126,28 +137,31 @@ function HitGroup({
   icon: Icon,
   items,
   onOpen,
+  fav,
 }: {
   title: string
   icon: typeof Shield
   items: DiscoveryHit[]
   onOpen: (id: string) => void
+  fav?: FavKind
 }) {
   if (items.length === 0) return null
   return (
     <section className="space-y-2">
       <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-        <Icon className="w-3.5 h-3.5 text-accent" /> {title}
+        <Icon className="w-3.5 h-3.5 text-accent" /> {title} ({items.length})
       </h2>
       {items.map((h) => (
-        <button
+        <div
           key={`${h.kind}-${h.id}`}
-          type="button"
-          onClick={() => onOpen(h.id)}
-          className="w-full text-left rounded-xl border border-hairline bg-court px-3 py-3 min-h-12 hover:border-accent/50 transition-colors"
+          className="flex items-center gap-2 rounded-xl border border-hairline bg-court pr-1 hover:border-accent/50 transition-colors"
         >
-          <p className="text-sm font-semibold text-white">{h.title}</p>
-          <p className="text-[11px] text-slate-400">{h.subtitle}</p>
-        </button>
+          <button type="button" onClick={() => onOpen(h.id)} className="grow min-w-0 text-left px-3 py-3 min-h-12">
+            <p className="text-sm font-semibold text-white truncate">{h.title}</p>
+            {h.subtitle ? <p className="text-[11px] text-slate-400 truncate">{h.subtitle}</p> : null}
+          </button>
+          {fav ? <FavoriteButton item={{ kind: fav, id: h.id, name: h.title, subtitle: h.subtitle }} size="sm" /> : null}
+        </div>
       ))}
     </section>
   )

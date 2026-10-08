@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Calendar, Heart, Search, Shield, User } from 'lucide-react'
 import { useFavorites } from '../hooks/useFavorites'
 import { parseFederationTeamId, readLastTeamId, writeLastTeamId } from '../utils/teamSelection'
 import { CourtMark } from '../components/CourtMark'
+import { FavoritesList } from '../components/FavoritesList'
 
 const QUICK = ['Honka', 'HNMKY', 'ToPo', 'U14', 'U16', 'Helsinki']
 
@@ -22,17 +23,6 @@ export function Home() {
   const [matchId, setMatchId] = useState('')
   const [teamId, setTeamId] = useState('')
   const [playerId, setPlayerId] = useState('')
-
-  const favoriteTeams = useMemo(
-    () =>
-      favorites
-        .filter((f) => f.kind === 'team')
-        .flatMap((f) => {
-          const parsed = parseFederationTeamId(f.id)
-          return parsed ? [{ ...f, teamId: parsed }] : []
-        }),
-    [favorites],
-  )
 
   useEffect(() => {
     const queryTeamId = parseFederationTeamId(searchParams.get('team'))
@@ -84,7 +74,7 @@ export function Home() {
             Basket.fi
           </span>
         </h1>
-        <p className="text-sm text-slate-400">Hae joukkueen nimellä. Ottelut ja tulokset tulevat Basket.fi-tulospalvelusta.</p>
+        <p className="text-sm text-slate-400">Hae seuran, joukkueen tai pelaajan nimellä. Ottelut ja tulokset tulevat Basket.fi-tulospalvelusta.</p>
       </div>
 
       <form
@@ -110,25 +100,21 @@ export function Home() {
       </form>
 
       <section className="space-y-2">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-          <Heart className="w-3.5 h-3.5 text-rose-400" />
-          Suosikkijoukkueet
-        </h2>
-        {favoriteTeams.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {favoriteTeams.map((team) => (
-              <button
-                key={`${team.kind}-${team.teamId}`}
-                type="button"
-                onClick={() => goTeam(team.teamId)}
-                className="chip border-rose-400/30 text-rose-200 hover:border-rose-300"
-              >
-                {team.name}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center justify-between">
+          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <Heart className="w-3.5 h-3.5 text-rose-400" />
+            Suosikit
+          </h2>
+          {favorites.length > 0 ? (
+            <button type="button" onClick={() => navigate('/favorites')} className="text-[11px] font-semibold text-ice min-h-11">
+              Kaikki →
+            </button>
+          ) : null}
+        </div>
+        {favorites.length > 0 ? (
+          <FavoritesList favorites={favorites.slice(0, 8)} />
         ) : (
-          <p className="text-xs text-slate-500">Ei suosikkijoukkueita vielä. Lisää joukkue suosikiksi joukkuesivulta.</p>
+          <p className="text-xs text-slate-500">Ei suosikkeja vielä. Tallenna joukkue, pelaaja tai seura sydämellä — ne näkyvät tässä.</p>
         )}
       </section>
 

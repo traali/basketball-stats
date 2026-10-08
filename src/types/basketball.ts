@@ -180,6 +180,12 @@ export interface BasketClubTeam {
   groupId?: string
   season?: string
   venueName?: string
+  /** e.g. "U16" (TASO age_group). */
+  ageGroup?: string
+  /** "Mies"/"Nainen" (TASO gender_fi). */
+  gender?: string
+  /** primary_category.competition_active === "1": playing in the current season. */
+  current?: boolean
 }
 
 export interface BasketClubDetail {

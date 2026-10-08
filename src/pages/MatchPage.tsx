@@ -8,6 +8,8 @@ import { BasketStandingsTable } from '../components/BasketStandingsTable'
 import { BasketPreviewExport } from '../components/BasketPreviewExport'
 import { BasketRosterCards } from '../components/BasketRosterCards'
 import { LoadError } from '../components/LoadError'
+import { FederationLink } from '../components/FederationLink'
+import { federationMatchUrl } from '../utils/federationLinks'
 import {
   fetchBasketMatch,
   fetchBasketGroup,
@@ -174,6 +176,21 @@ export function MatchPage() {
         onOpenHome={match.homeTeamId ? () => navigate(`/team/${match.homeTeamId}`) : undefined}
         onOpenAway={match.awayTeamId ? () => navigate(`/team/${match.awayTeamId}`) : undefined}
       />
+
+      <div className="flex flex-wrap items-center justify-between gap-2 -mt-2">
+        {match.competitionId && match.categoryId && match.groupId ? (
+          <button
+            type="button"
+            onClick={() => navigate(`/group/${match.competitionId}/${match.categoryId}/${match.groupId}`)}
+            className="text-xs font-semibold text-ice min-h-11"
+          >
+            Lohkon ottelut ja taulukko →
+          </button>
+        ) : (
+          <span />
+        )}
+        <FederationLink href={federationMatchUrl(match.matchId)} label="Ottelu Basket.fi-tulospalvelussa" />
+      </div>
 
       {dayGames.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">

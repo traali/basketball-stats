@@ -7,6 +7,8 @@ import type { BasketStandingRow, BasketTeamFixture, BasketTeamProfile } from '..
 import { BasketStandingsTable } from '../components/BasketStandingsTable'
 import { MatchRow } from '../components/MatchRow'
 import { LoadError } from '../components/LoadError'
+import { FederationLink } from '../components/FederationLink'
+import { federationTeamUrl } from '../utils/federationLinks'
 import { useFavorites } from '../hooks/useFavorites'
 import { writeLastTeamId } from '../utils/teamSelection'
 import { splitFixtures, teamSeasons } from '../utils/fixtureGroups'
@@ -126,6 +128,9 @@ export function TeamPage() {
               Seuran joukkueet →
             </button>
           ) : null}
+          <div>
+            <FederationLink href={federationTeamUrl(teamId)} label="Joukkue Basket.fi-tulospalvelussa" />
+          </div>
         </div>
         <button
           type="button"

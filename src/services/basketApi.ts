@@ -35,6 +35,19 @@ import {
   winnerSide,
   type MatchState,
 } from '../utils/matchStatus.ts'
+import { formatGameDateTime } from '../utils/formatFi.ts'
+import {
+  normalizeSearch,
+  searchBasket,
+  searchNumber,
+  type LookupHit,
+  type SearchDeps,
+  type SearchOptions,
+  type SearchOutcome,
+} from './basketSearch.ts'
+
+export { normalizeSearch }
+export type { SearchOutcome }
 
 const API_BASE = 'https://koripallo-api.torneopal.net/taso/rest'
 const TASO_PROXY = 'https://taso-proxy.sakkoja.workers.dev/basket'
@@ -165,18 +178,20 @@ export type BasketResource =
   | { kind: 'match'; id: string }
   | { kind: 'team'; id: string }
   | { kind: 'player'; id: string }
+  | { kind: 'club'; id: string }
   | { kind: 'none' }
 
 function parseBasketSourceUrl(rawUrl: string): BasketResource {
   try {
     const url = new URL(rawUrl)
-    const fromPath = url.pathname.match(/\/(match|game|team|player)\/([^/?#]+)/i)
+    const fromPath = url.pathname.match(/\/(match|game|team|player|club)\/([^/?#]+)/i)
     if (fromPath?.[1] && fromPath[2]) {
       const kind = fromPath[1].toLowerCase()
       const id = decodeURIComponent(fromPath[2])
       if (kind === 'match' || kind === 'game') return { kind: 'match', id }
       if (kind === 'team') return { kind: 'team', id }
       if (kind === 'player') return { kind: 'player', id }
+      if (kind === 'club') return { kind: 'club', id }
     }
 
     const matchId = firstQueryValue(url.searchParams, ['match_id', 'matchId', 'match', 'game_id', 'gameId', 'game'])
@@ -558,14 +573,6 @@ export function getSeasonYear(dateStr?: string): string {
   return '2026'
 }
 
-export function normalizeSearch(q: string): string {
-  return q
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-}
 
 export function parseBasketQuery(raw: string):
   | { kind: 'match'; id: string }
@@ -838,6 +845,9 @@ function mapClubTeam(t: Record<string, unknown>): BasketClubTeam {
     groupId: pc.group_id ? str(pc.group_id) : undefined,
     season: pc.competition_season ? str(pc.competition_season) : undefined,
     venueName: t.home_venue_name ? str(t.home_venue_name) : undefined,
+    ageGroup: t.age_group ? str(t.age_group) : pc.category_age_group ? str(pc.category_age_group) : undefined,
+    gender: t.gender_fi ? str(t.gender_fi) : undefined,
+    current: str(pc.competition_active) === '1',
   }
 }
 
@@ -927,148 +937,68 @@ export async function fetchBasketPlayer(playerId: string): Promise<BasketPlayerP
   }
 }
 
-export async function searchDiscovery(query: string): Promise<DiscoveryHit[]> {
-  const parsed = parseBasketQuery(query)
-  const hits: DiscoveryHit[] = []
-
-  if (parsed.kind === 'match') {
-    hits.push({ kind: 'match', id: parsed.id, title: `Ottelu #${parsed.id}`, subtitle: 'Avaa ottelu' })
-    hits.push({ kind: 'team', id: parsed.id, title: `Joukkue #${parsed.id}`, subtitle: 'Kokeile joukkueena' })
-    hits.push({ kind: 'player', id: parsed.id, title: `Pelaaja #${parsed.id}`, subtitle: 'Kokeile pelaajana' })
-    return hits
+function teamLookupHit(t: Record<string, unknown> | undefined): LookupHit | null {
+  if (!t || !str(t.team_id)) return null
+  const pc = (t.primary_category as Record<string, unknown>) || {}
+  return {
+    title: str(t.team_name, 'Joukkue'),
+    subtitle: [str(t.club_name), str(pc.category_name)].filter(Boolean).join(' · '),
   }
-  if (parsed.kind === 'team') {
-    hits.push({ kind: 'team', id: parsed.id, title: `Joukkue #${parsed.id}`, subtitle: 'Avaa joukkue' })
-    return hits
-  }
-  if (parsed.kind === 'player') {
-    hits.push({ kind: 'player', id: parsed.id, title: `Pelaaja #${parsed.id}`, subtitle: 'Avaa pelaaja' })
-    return hits
-  }
-  if (parsed.kind === 'club') {
-    hits.push({ kind: 'club', id: parsed.id, title: `Seura #${parsed.id}`, subtitle: 'Avaa seura' })
-    return hits
-  }
-
-  const q = normalizeSearch(parsed.q)
-  if (q.length < 2) return []
-
-  const clubs = await fetchBasketClubs()
-  const tokens = q.split(' ').filter(Boolean)
-  const clubHits = clubs.filter((c) => {
-    const hay = normalizeSearch(`${c.name} ${c.abbreviation} ${c.cityName}`)
-    return tokens.every((t) => hay.includes(t)) || hay.includes(q)
-  })
-
-  const topClubs = clubHits.slice(0, 8)
-  for (const c of topClubs) {
-    hits.push({
-      kind: 'club',
-      id: c.clubId,
-      title: c.abbreviation || c.name,
-      subtitle: [c.cityName, 'Seura'].filter(Boolean).join(' · '),
-      crest: c.crest,
-    })
-  }
-
-  const clubsToExpand = (
-    topClubs.length > 0
-      ? topClubs
-      : clubs.filter((c) => {
-          const hay = normalizeSearch(`${c.name} ${c.abbreviation}`)
-          return tokens.some((t) => t.length >= 3 && hay.includes(t))
-        })
-  ).slice(0, 5)
-
-  const clubDetails = await Promise.all(clubsToExpand.map((c) => fetchBasketClub(c.clubId)))
-  const seenTeams = new Set<string>()
-  for (const detail of clubDetails) {
-    if (!detail) continue
-    const active = detail.teams.filter((t) => t.status === 'active')
-    const pool = active.length ? active : detail.teams
-    for (const t of pool) {
-      const hay = normalizeSearch(`${t.teamName} ${t.categoryName} ${detail.name}`)
-      const matchesAll = tokens.every((tok) => hay.includes(tok))
-      if (!matchesAll && topClubs.length === 0) continue
-      if (!matchesAll && tokens.length > 1) {
-        const last = tokens[tokens.length - 1]
-        if (!normalizeSearch(t.teamName).includes(last) && !hay.includes(last)) continue
-      }
-      if (seenTeams.has(t.teamId)) continue
-      seenTeams.add(t.teamId)
-      hits.push({
-        kind: 'team',
-        id: t.teamId,
-        title: t.teamName,
-        subtitle: [t.categoryName, t.season || detail.name].filter(Boolean).join(' · '),
-      })
-      if (hits.filter((h) => h.kind === 'team').length >= 12) break
-    }
-    if (hits.filter((h) => h.kind === 'team').length >= 12) break
-  }
-
-  const comps = await fetchBasketCompetitions().catch(() => [])
-  const looksLikePerson = tokens.length >= 2 && tokens.every((t) => /^[a-zåäö]{2,}$/i.test(t))
-  const clubOrTeamHits = hits.filter((h) => h.kind === 'club' || h.kind === 'team').length
-  if (!looksLikePerson) {
-    for (const c of comps) {
-      const hay = normalizeSearch(`${c.competitionName} ${c.organiser || ''} ${c.locationName || ''}`)
-      if (tokens.every((t) => hay.includes(t)) || hay.includes(q)) {
-        hits.push({
-          kind: 'competition',
-          id: c.competitionId,
-          title: c.competitionName,
-          subtitle: c.seasonId,
-        })
-      }
-    }
-
-    const needDeepScan = clubOrTeamHits < 6
-    if (needDeepScan) {
-      const catSources = comps
-        .filter((c) => (c.competitionId || '').includes('2026') || (c.seasonId || '').includes('2026'))
-        .slice(0, 4)
-      const catLists = await Promise.all(catSources.map((c) => fetchBasketCategories(c.competitionId).catch(() => [])))
-      for (const list of catLists) {
-        for (const cat of list) {
-          if (!normalizeSearch(cat.categoryName).includes(q) && !tokens.some((t) => normalizeSearch(cat.categoryName).includes(t))) {
-            continue
-          }
-          hits.push({
-            kind: 'category',
-            id: `${cat.competitionId}::${cat.categoryId}`,
-            title: cat.categoryName,
-            subtitle: cat.competitionName,
-          })
-        }
-      }
-    }
-  }
-
-  if (looksLikePerson || clubOrTeamHits < 6) {
-    const playerTeamIds = [...seenTeams].slice(0, 4)
-    const profiles = await Promise.all(
-      [...new Set(playerTeamIds)].slice(0, 8).map((id) => fetchBasketTeamProfile(id).catch(() => null)),
-    )
-    const seenPlayers = new Set<string>()
-    for (const team of profiles) {
-      if (!team) continue
-      for (const p of team.players) {
-        const hay = normalizeSearch(p.fullName)
-        if (!hay.includes(q) && !tokens.some((t) => hay.includes(t))) continue
-        if (!p.playerId || seenPlayers.has(p.playerId)) continue
-        seenPlayers.add(p.playerId)
-        hits.push({
-          kind: 'player',
-          id: p.playerId,
-          title: p.fullName,
-          subtitle: team.teamName,
-        })
-      }
-    }
-  }
-
-  return hits.slice(0, 30)
 }
 
+/** Real data sources for searchBasket(). */
+export const basketSearchDeps: SearchDeps = {
+  clubs: fetchBasketClubs,
+  club: fetchBasketClub,
+  roster: fetchBasketTeamRoster,
+  competitions: fetchBasketCompetitions,
+  categories: fetchBasketCategories,
+  async match(id) {
+    const m = await fetchBasketMatch(id)
+    if (!m) return null
+    return {
+      title: `${m.homeTeamName} – ${m.awayTeamName}`,
+      subtitle: [formatGameDateTime(m.date, m.time), m.categoryName].filter(Boolean).join(' · '),
+    }
+  },
+  async team(id) {
+    try {
+      const data = await basketGetCached(`getTeam?team_id=${encodeURIComponent(id)}`, 60 * 1000)
+      return teamLookupHit(data?.team as Record<string, unknown> | undefined)
+    } catch (err) {
+      if (isNotFound(err)) return null
+      throw err
+    }
+  },
+  async player(id) {
+    const p = await fetchBasketPlayer(id)
+    if (!p) return null
+    return { title: p.fullName, subtitle: [p.clubName, p.birthYear].filter(Boolean).join(' · ') }
+  },
+  async clubById(id) {
+    try {
+      const c = await fetchBasketClub(id)
+      return c && c.name ? { title: c.name, subtitle: c.cityName } : null
+    } catch (err) {
+      if (isNotFound(err)) return null
+      throw err
+    }
+  },
+}
 
+/**
+ * Search clubs, teams, players, competitions and age groups from real TASO
+ * data. A bare number is looked up as a game, team and player id.
+ */
+export async function searchBasketData(query: string, opts: SearchOptions = {}): Promise<SearchOutcome> {
+  const val = query.trim()
+  if (/^\d{1,12}$/.test(val)) return searchNumber(val, basketSearchDeps)
+  return searchBasket(parseBasketQuery(val), basketSearchDeps, opts)
+}
+
+/** Hits only; kept for callers that just list results. Throws if Basket.fi failed. */
+export async function searchDiscovery(query: string, opts: SearchOptions = {}): Promise<DiscoveryHit[]> {
+  const res = await searchBasketData(query, opts)
+  if (res.failed) throw new BasketApiError('search', ['Basket.fi search failed'])
+  return res.hits
+}
