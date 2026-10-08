@@ -27,7 +27,7 @@ Every component file: [UI_COMPONENTS.md](./UI_COMPONENTS.md).
 |---|---|---|
 | Header wordmark + CourtMark | `src/components/Header.tsx` | Back to `/`. Subtitle Koripalloliitto · Basket.fi so the source is visible |
 | Hae | same | Jumps to `/search` without using the bottom nav |
-| WebMcpBadge | `src/components/WebMcpBadge.tsx` | Shows whether `document.modelContext` is the browser host or the polyfill |
+| WebMcpBadge | `src/components/WebMcpBadge.tsx` | Shows whether the browser's `document.modelContext` accepted the tools (no polyfill) |
 | Bottom nav | `src/components/BottomNav.tsx` | Four jobs: home, browse series, search, favorites. 48px targets |
 | Embed | header hidden when embed | A host page must not get a second chrome |
 
@@ -97,4 +97,4 @@ Takaisin uses browser history. Team names link to `/team/:id`.
 - Team fouls exist only as TASO live fouls; they are shown only for a game live today. The old Virheet & Bonus tab showed 0/5 for every finished game and was removed.
 - Do not translate V/T/H to W/D/L.
 - Do not sync favorites to a server.
-- Do not overwrite `document.modelContext` if the browser already has it. See `src/webmcp.ts`.
+- Never define or polyfill `document.modelContext`; tools register only when the browser provides it (Chrome 146+ flag). No postMessage tool bridge. See `src/webmcp.ts`.
