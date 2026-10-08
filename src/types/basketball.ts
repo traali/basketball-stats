@@ -1,11 +1,19 @@
 /**
  * Koripallo / Basket.fi Torneopal Data Types
+ *
+ * Rule: a number is only a number when TASO sent it. Anything TASO left blank
+ * is null/undefined here and is shown blank in the UI — never 0.
  */
+import type { MatchState, Side } from '../utils/matchStatus.ts'
+
+export type { MatchState, Side }
 
 export interface BasketQuarterScore {
+  /** 1–4 quarters, 5 overtime. */
   quarter: number
-  scoreHome: number
-  scoreAway: number
+  scoreHome: number | null
+  scoreAway: number | null
+  winner?: Side
 }
 
 export interface BasketPlayerLeader {
@@ -14,8 +22,9 @@ export interface BasketPlayerLeader {
   shirtNumber: string
   teamName: string
   points: number
-  threePointers: number
-  fouls: number
+  /** Counted from the game's scoring events ("3 x-y"); null when there are no events. */
+  threePointers: number | null
+  fouls: number | null
 }
 
 export interface BasketRosterPlayer {
@@ -24,11 +33,13 @@ export interface BasketRosterPlayer {
   shirtNumber: string
   teamId?: string
   teamName: string
-  points: number
-  assists: number
-  fouls: number
-  threePointers: number
+  /** Game stats exist only on a game lineup with track_scorers=1. Season rosters have none. */
+  points: number | null
+  assists: number | null
+  fouls: number | null
+  threePointers: number | null
   isCaptain?: boolean
+  starter?: boolean
   birthYear?: string
 }
 
@@ -49,20 +60,27 @@ export interface BasketMatchDetail {
   competitionId?: string
   categoryId?: string
   groupId?: string
-  scoreHome: number
-  scoreAway: number
+  /** Only set for played games and today's live games. */
+  scoreHome: number | null
+  scoreAway: number | null
   isLive: boolean
-  phase: 'live' | 'upcoming' | 'played'
+  phase: MatchState
+  rawStatus: string
+  /** e.g. "Spartan Basket luovutti" */
+  forfeitText?: string
+  winnerSide?: Side
+  /** The result TASO books for a walkover (e.g. 40–0). Not a played score. */
+  forfeitScore?: { home: number; away: number }
   referee1?: string
   referee2?: string
   spectators?: number
-  playingTimeMin?: number
   quarters: BasketQuarterScore[]
-  overtimeScore?: { scoreHome: number; scoreAway: number }
-  teamFoulsHome: number
-  teamFoulsAway: number
-  isHomeBonusFreeThrow: boolean
-  isAwayBonusFreeThrow: boolean
+  /** Live team fouls (TASO live_fouls_*); null unless the game is live today. */
+  teamFoulsHome: number | null
+  teamFoulsAway: number | null
+  livePeriod?: number
+  /** track_scorers=1: lineup points/fouls are recorded. */
+  statsTracked: boolean
   leaders: BasketPlayerLeader[]
   homeRoster: BasketRosterPlayer[]
   awayRoster: BasketRosterPlayer[]
@@ -81,6 +99,13 @@ export interface BasketTeamFixture {
   homeTeamId?: string
   awayTeamId?: string
   status?: string
+  state: MatchState
+  forfeitText?: string
+  winnerSide?: Side
+  /** Season label from TASO competition_season, e.g. "2026-2027". */
+  season?: string
+  groupId?: string
+  /** Only set when a score may be shown (played / live today). */
   score?: string
   scoreHome?: number
   scoreAway?: number
@@ -109,13 +134,6 @@ export interface BasketStandingRow {
   diff: number
   totalPoints: number
   form: ('V' | 'T' | 'H')[]
-}
-
-export interface CustomBasketTeam {
-  id: string
-  name: string
-  category: string
-  addedAt: string
 }
 
 export interface BasketSeasonGroup {
@@ -235,6 +253,8 @@ export interface BasketGroupMatch {
   scoreHome?: number
   scoreAway?: number
   status: string
+  state: MatchState
+  winnerSide?: Side
   venueName?: string
 }
 
@@ -270,13 +290,10 @@ export interface BasketPlayerMatch {
   teamId?: string
   scoreHome?: number
   scoreAway?: number
+  state: MatchState
   categoryName: string
   competitionName: string
   seasonId?: string
-  points: number
-  assists: number
-  fouls: number
-  threePointers: number
   venueName?: string
 }
 

@@ -33,7 +33,7 @@ export const BasketPreviewExport: React.FC<BasketPreviewExportProps> = ({ match,
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-hairline pb-3">
         <h3 className="font-bold text-sm tracking-wide text-slate-100 flex items-center gap-2">
           <Share2 className="w-4 h-4 text-accent" />
-          AI-ennakko (.md kuten jalkapallo)
+          Jaa ottelun tiedot (.md)
         </h3>
         <div className="flex gap-2">
           <button type="button" onClick={copy} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lane text-xs font-semibold">

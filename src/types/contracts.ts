@@ -139,45 +139,46 @@ export function parseIncomingCrossRepoQuery(searchParams: URLSearchParams): Cros
   }
 }
 
+/**
+ * SportStatsContract from Basket.fi data only. Scores are omitted unless the
+ * game is played (or live today); a period is included only when TASO filled
+ * both sides; fouls only when TASO sends live team fouls. No bonus guess.
+ */
 export function buildBasketballStatsContract(detail: {
   matchId: string
   homeTeamName: string
   awayTeamName: string
-  scoreHome: number
-  scoreAway: number
-  quarters: Array<{ quarter: number; scoreHome: number; scoreAway: number }>
-  teamFoulsHome: number
-  teamFoulsAway: number
+  scoreHome: number | null
+  scoreAway: number | null
+  quarters: Array<{ quarter: number; scoreHome: number | null; scoreAway: number | null }>
+  teamFoulsHome: number | null
+  teamFoulsAway: number | null
   leaders: Array<{ playerName: string; teamName: string; points: number }>
+  phase?: string
 }): SportStatsContract {
+  const periods = detail.quarters.filter(
+    (q): q is { quarter: number; scoreHome: number; scoreAway: number } => q.scoreHome !== null && q.scoreAway !== null,
+  )
+  const fouls = detail.teamFoulsHome !== null && detail.teamFoulsAway !== null
+  const keyMetrics: Record<string, string | number> = { quarters: periods.length }
+  if (detail.phase) keyMetrics.state = detail.phase
   return {
     sport: 'basketball',
     matchOrTeamId: detail.matchId,
     matchId: detail.matchId,
     homeTeamName: detail.homeTeamName,
     awayTeamName: detail.awayTeamName,
-    homeScore: detail.scoreHome,
-    awayScore: detail.scoreAway,
-    periodScores: detail.quarters.map((q) => ({
-      period: q.quarter,
-      scoreHome: q.scoreHome,
-      scoreAway: q.scoreAway,
-    })),
-    specialStats: {
-      foulsHome: detail.teamFoulsHome,
-      foulsAway: detail.teamFoulsAway,
-      bonusFreeThrows: detail.teamFoulsHome >= 5 || detail.teamFoulsAway >= 5,
-    },
+    ...(detail.scoreHome !== null && detail.scoreAway !== null
+      ? { homeScore: detail.scoreHome, awayScore: detail.scoreAway }
+      : {}),
+    periodScores: periods.map((q) => ({ period: q.quarter, scoreHome: q.scoreHome, scoreAway: q.scoreAway })),
+    ...(fouls ? { specialStats: { foulsHome: detail.teamFoulsHome as number, foulsAway: detail.teamFoulsAway as number } } : {}),
     topScorers: detail.leaders.map((l) => ({
       playerName: l.playerName,
       team: l.teamName,
       goalsOrPoints: l.points,
     })),
-    keyMetrics: {
-      quarters: detail.quarters.length,
-      foulsHome: detail.teamFoulsHome,
-      foulsAway: detail.teamFoulsAway,
-    },
+    keyMetrics,
     deepLinkUrl: `https://basketball-stats-byu.pages.dev/#/match/${encodeURIComponent(detail.matchId)}?embed=true`,
     updatedAt: new Date().toISOString(),
   }

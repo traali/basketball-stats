@@ -3,19 +3,25 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ListTree } from 'lucide-react'
 import { fetchBasketGroups } from '../services/basketApi'
 import type { BasketGroupSummary } from '../types/basketball'
+import { LoadError } from '../components/LoadError'
 
 export function CategoryPage() {
   const { compId = '', catId = '' } = useParams()
   const navigate = useNavigate()
   const [groups, setGroups] = useState<BasketGroupSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     if (!compId || !catId) return
+    setLoading(true)
+    setFailed(false)
     fetchBasketGroups(compId, catId)
       .then(setGroups)
+      .catch(() => setFailed(true))
       .finally(() => setLoading(false))
-  }, [compId, catId])
+  }, [compId, catId, attempt])
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-4 space-y-4">
@@ -25,6 +31,10 @@ export function CategoryPage() {
       <h1 className="text-2xl font-semibold tracking-tight">{groups[0]?.categoryName || 'Sarja'}</h1>
       {loading ? (
         <div className="animate-pulse h-24 rounded-2xl bg-court" />
+      ) : failed ? (
+        <LoadError what="Lohkoja" onRetry={() => setAttempt((n) => n + 1)} />
+      ) : groups.length === 0 ? (
+        <p className="text-sm text-slate-500">Basket.fi ei näytä tälle sarjalle lohkoja.</p>
       ) : (
         <div className="space-y-2">
           {groups.map((g) => (

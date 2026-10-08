@@ -44,3 +44,24 @@ describe('basket URL resource parsing', () => {
     assert.deepEqual(player, { kind: 'player', id: '9835' })
   })
 })
+
+describe('Pelipäivä deep link #/match/<TASO match_id>', () => {
+  it('resolves the hash route to the TASO match_id (not the printed game number)', () => {
+    assert.deepEqual(parseBasketResourceFromLocation('https://basketball-stats-byu.pages.dev/#/match/1009819'), {
+      kind: 'match',
+      id: '1009819',
+    })
+    assert.deepEqual(parseBasketResourceFromLocation('https://basketball-stats-byu.pages.dev/#/match/1009819?embed=true'), {
+      kind: 'match',
+      id: '1009819',
+    })
+  })
+
+  it('the router serves /match/:matchId and MatchPage loads getMatch?match_id=', async () => {
+    const { readFileSync } = await import('node:fs')
+    const routes = readFileSync(new URL('../src/routes.tsx', import.meta.url), 'utf8')
+    assert.match(routes, /path: '\/match\/:matchId', element: <MatchPage \/>/)
+    const api = readFileSync(new URL('../src/services/basketApi.ts', import.meta.url), 'utf8')
+    assert.match(api, /getMatch\?match_id=\$\{encodeURIComponent\(matchId\)\}/)
+  })
+})

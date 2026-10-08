@@ -69,8 +69,9 @@ Hash router: `src/routes.tsx`. Unknown paths go home.
 | Tab | Why |
 |---|---|
 | Ottelut | Upcoming and played for this team id. Count is the filtered list |
-| Kokoonpano | Roster and points from the team profile |
-| Sarjataulukko | `BasketStandingsTable`. Form dots are V win, T draw, H loss |
+| Ottelut | Grouped by TASO state: Käynnissä, Tulevat, Pelatut (incl. luovutus), Muut (Ei tulosta / Siirretty / Aika avoin). Season chips come from TASO `competition_season` |
+| Pelaajat | Names, shirt numbers, birth years. TASO's getTeam has no stats, so none are shown |
+| Sarjataulukko | `BasketStandingsTable`. Viimeiset dots are V win, H loss (walkovers count) |
 
 Heart on the team page writes `basket.favorites.v1`.
 
@@ -80,10 +81,9 @@ Heart on the team page writes `basket.favorites.v1`.
 
 | Tab | Why |
 |---|---|
-| Ottelukeskus | Score, clock, venue, same-day games for the two clubs |
-| Kokoonpano | Who dressed |
-| Pistetilasto (PTS) | Points, not floorball G+A |
-| Virheet & Bonus | Team fouls and bonus. Basketball-only. Do not delete it to match floorball |
+| Ottelu | Score only for Played (or live today), state badge otherwise, quarters as recorded (blank stays blank), same-day games |
+| Kokoonpano | Game lineup when TASO has one, else the teams' player lists clearly labelled as not this game's lineup |
+| Pisteet | Only when the lineup has recorded points (`track_scorers=1`). 3P counted from scoring events |
 | Sarjataulukko | The group table in context |
 | Jaa | Export card for a parent chat. Not a live score feed |
 
@@ -93,6 +93,8 @@ Takaisin uses browser history. Team names link to `/team/:id`.
 
 - Do not pin Selaa to one competition id.
 - Do not invent a hero match on an empty home.
+- Do not print 0 for anything TASO left blank (quarters, assists, roster stats). See `docs/DATA_FIELDS.md`.
+- Team fouls exist only as TASO live fouls; they are shown only for a game live today. The old Virheet & Bonus tab showed 0/5 for every finished game and was removed.
 - Do not translate V/T/H to W/D/L.
 - Do not sync favorites to a server.
 - Do not overwrite `document.modelContext` if the browser already has it. See `src/webmcp.ts`.

@@ -49,9 +49,9 @@ describe('season helpers', () => {
 describe('form letters V/T/H', () => {
   it('computes Finnish form from group matches', () => {
     const form = lastFormForTeam('20053', [
-      { matchId: '1', date: '2026-09-01', time: '18:00', homeTeam: 'A', awayTeam: 'B', homeTeamId: '20053', awayTeamId: '9', scoreHome: 70, scoreAway: 60, status: 'played' },
-      { matchId: '2', date: '2026-09-08', time: '18:00', homeTeam: 'A', awayTeam: 'B', homeTeamId: '8', awayTeamId: '20053', scoreHome: 80, scoreAway: 70, status: 'played' },
-      { matchId: '3', date: '2026-09-15', time: '18:00', homeTeam: 'A', awayTeam: 'B', homeTeamId: '20053', awayTeamId: '7', scoreHome: 64, scoreAway: 64, status: 'played' },
+      { matchId: '1', date: '2026-09-01', time: '18:00', homeTeam: 'A', awayTeam: 'B', homeTeamId: '20053', awayTeamId: '9', scoreHome: 70, scoreAway: 60, status: 'Played', state: 'played' },
+      { matchId: '2', date: '2026-09-08', time: '18:00', homeTeam: 'A', awayTeam: 'B', homeTeamId: '8', awayTeamId: '20053', scoreHome: 80, scoreAway: 70, status: 'Played', state: 'played' },
+      { matchId: '3', date: '2026-09-15', time: '18:00', homeTeam: 'A', awayTeam: 'B', homeTeamId: '20053', awayTeamId: '7', scoreHome: 64, scoreAway: 64, status: 'Played', state: 'played' },
     ])
     assert.deepEqual(form, ['V', 'H', 'T'])
   })
@@ -59,7 +59,7 @@ describe('form letters V/T/H', () => {
   it('attaches form to standings rows', () => {
     const rows = mapGroupTeamsToStandings(
       [{ teamId: '20053', teamName: 'Honka', rank: 1, points: 4, played: 2, wins: 2, draws: 0, losses: 0, goalsFor: 140, goalsAgainst: 110, diff: 30 }],
-      [{ matchId: '1', date: '2026-09-01', time: '18:00', homeTeam: 'Honka', awayTeam: 'ToPo', homeTeamId: '20053', awayTeamId: '1', scoreHome: 80, scoreAway: 50, status: 'played' }],
+      [{ matchId: '1', date: '2026-09-01', time: '18:00', homeTeam: 'Honka', awayTeam: 'ToPo', homeTeamId: '20053', awayTeamId: '1', scoreHome: 80, scoreAway: 50, status: 'Played', state: 'played' }],
     )
     assert.equal(rows[0].form[0], 'V')
     assert.equal(rows[0].pointsFor, 140)
@@ -103,6 +103,6 @@ describe('upcoming 0-0 fixtures', () => {
       category_name: 'U14',
     }, '20053')
     assert.equal(played.score, '0–0')
-    assert.equal(played.isDraw, true)
+    assert.equal(played.state, 'played')
   })
 })

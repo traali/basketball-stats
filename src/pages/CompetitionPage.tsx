@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Layers } from 'lucide-react'
 import { fetchBasketCategories, normalizeSearch } from '../services/basketApi'
 import type { BasketCategory } from '../types/basketball'
+import { LoadError } from '../components/LoadError'
 
 const AGE = [
   { id: 'all', label: 'Kaikki' },
@@ -20,14 +21,19 @@ export function CompetitionPage() {
   const navigate = useNavigate()
   const [cats, setCats] = useState<BasketCategory[]>([])
   const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const [age, setAge] = useState<(typeof AGE)[number]['id']>('all')
 
   useEffect(() => {
     if (!compId) return
+    setLoading(true)
+    setFailed(false)
     fetchBasketCategories(compId)
       .then(setCats)
+      .catch(() => setFailed(true))
       .finally(() => setLoading(false))
-  }, [compId])
+  }, [compId, attempt])
 
   const visible = useMemo(() => {
     if (age === 'all') return cats
@@ -54,6 +60,10 @@ export function CompetitionPage() {
       </div>
       {loading ? (
         <div className="animate-pulse h-24 rounded-2xl bg-court" />
+      ) : failed ? (
+        <LoadError what="Sarjoja" onRetry={() => setAttempt((n) => n + 1)} />
+      ) : visible.length === 0 ? (
+        <p className="text-sm text-slate-500">Basket.fi ei näytä tälle kilpailulle sarjoja.</p>
       ) : (
         <div className="space-y-2">
           {visible.map((c) => (

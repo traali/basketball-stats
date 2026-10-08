@@ -1,32 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import {
-  ArrowLeft,
-  Calendar,
-  MapPin,
-  Trophy,
-  Users,
-  Loader2,
-  CheckCircle2,
-  Heart,
-} from 'lucide-react'
+import { ArrowLeft, Calendar, Trophy, Users, Loader2, Heart } from 'lucide-react'
 import clsx from 'clsx'
-import {
-  fetchBasketTeamProfile,
-  fetchBasketGroup,
-  pickCurrentGroup,
-  mapGroupTeamsToStandings,
-} from '../services/basketApi'
-import type {
-  BasketStandingRow,
-  BasketTeamProfile,
-} from '../types/basketball'
+import { fetchBasketTeamProfile, fetchBasketGroup, pickCurrentGroup, mapGroupTeamsToStandings } from '../services/basketApi'
+import type { BasketStandingRow, BasketTeamFixture, BasketTeamProfile } from '../types/basketball'
 import { BasketStandingsTable } from '../components/BasketStandingsTable'
+import { MatchRow } from '../components/MatchRow'
+import { LoadError } from '../components/LoadError'
 import { useFavorites } from '../hooks/useFavorites'
 import { writeLastTeamId } from '../utils/teamSelection'
+import { splitFixtures, teamSeasons } from '../utils/fixtureGroups'
 
 type TeamTab = 'schedule' | 'roster' | 'standings'
-type SeasonScope = 'syksy' | 'kevat' | 'all'
 
 export function TeamPage() {
   const { teamId = '' } = useParams()
@@ -36,32 +21,42 @@ export function TeamPage() {
 
   const [profile, setProfile] = useState<BasketTeamProfile | null>(null)
   const [standings, setStandings] = useState<BasketStandingRow[]>([])
+  const [standingsFailed, setStandingsFailed] = useState(false)
   const [loading, setLoading] = useState(true)
-
-  // Season filter: default is current season (Syksy 2026)
-  const [selectedSeason, setSelectedSeason] = useState<SeasonScope>('syksy')
-  const [selectedYear, setSelectedYear] = useState<string>('2026')
+  const [failed, setFailed] = useState(false)
+  const [season, setSeason] = useState<string>('')
 
   const initialTab = (searchParams.get('tab') as TeamTab) || 'schedule'
   const [activeTab, setActiveTab] = useState<TeamTab>(initialTab)
 
-  useEffect(() => {
-    async function loadTeam() {
-      setLoading(true)
-      const p = await fetchBasketTeamProfile(teamId)
-      if (p) {
-        setProfile(p)
-        const current = pickCurrentGroup(p.groups)
-        if (current) {
-          const detail = await fetchBasketGroup(current.competitionId, current.categoryId, current.groupId)
-          if (detail) setStandings(mapGroupTeamsToStandings(detail.teams, detail.matches))
-        }
-      }
+  const load = useCallback(async () => {
+    setLoading(true)
+    setFailed(false)
+    let p: BasketTeamProfile | null = null
+    try {
+      p = await fetchBasketTeamProfile(teamId)
+    } catch {
+      setFailed(true)
       setLoading(false)
+      return
     }
-
-    loadTeam()
+    setProfile(p)
+    setLoading(false)
+    const current = p ? pickCurrentGroup(p.groups) : null
+    if (p) setSeason(current?.seasonId || teamSeasons(p.fixtures)[0] || '')
+    if (current) {
+      try {
+        const detail = await fetchBasketGroup(current.competitionId, current.categoryId, current.groupId)
+        if (detail) setStandings(mapGroupTeamsToStandings(detail.teams, detail.matches))
+      } catch {
+        setStandingsFailed(true)
+      }
+    }
   }, [teamId])
+
+  useEffect(() => {
+    void load()
+  }, [load])
 
   useEffect(() => {
     writeLastTeamId(teamId)
@@ -72,70 +67,63 @@ export function TeamPage() {
     setSearchParams({ tab })
   }
 
-  // Filter fixtures according to selected season & year
-  const filteredFixtures = useMemo(() => {
-    if (!profile?.fixtures) return []
-    return profile.fixtures.filter((f) => {
-      if (selectedSeason === 'all') {
-        return f.date.startsWith(selectedYear)
-      }
-      return f.date.startsWith(selectedYear) && f.seasonHalf === selectedSeason
-    })
-  }, [profile?.fixtures, selectedSeason, selectedYear])
-
-  const upcomingMatches = useMemo(() => {
-    return filteredFixtures
-      .filter((f) => !f.score)
-      .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
-  }, [filteredFixtures])
-
-  const playedMatches = useMemo(() => {
-    return filteredFixtures
-      .filter((f) => Boolean(f.score))
-      .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
-  }, [filteredFixtures])
+  const seasons = useMemo(() => teamSeasons(profile?.fixtures || []), [profile?.fixtures])
+  const inSeason = useMemo<BasketTeamFixture[]>(
+    () => (profile?.fixtures || []).filter((f) => !season || f.season === season),
+    [profile?.fixtures, season],
+  )
+  const groups = useMemo(() => splitFixtures(inSeason), [inSeason])
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-slate-400">
         <Loader2 className="w-8 h-8 animate-spin text-accent" />
-        <p className="text-sm">Ladataan joukkueen koripallotilastoja...</p>
+        <p className="text-sm">Ladataan joukkuetta…</p>
       </div>
     )
   }
 
-  const teamName = profile?.teamName || `Joukkue #${teamId}`
-  const categoryName = profile?.categoryName || 'Basket.fi Basket'
+  if (failed) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <LoadError what={`Joukkuetta #${teamId}`} onRetry={() => void load()} />
+      </div>
+    )
+  }
+
+  if (!profile) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center text-sm text-rose-400">
+        Basket.fi:ssä ei ole joukkuetta tunnuksella #{teamId}.
+      </div>
+    )
+  }
+
+  const teamName = profile.teamName
   const fav = isFavorite('team', teamId)
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4 space-y-6">
-      {/* Header with Back button */}
-      <div className="flex items-center gap-3">
+    <div className="max-w-4xl mx-auto px-4 py-4 space-y-5">
+      <div className="flex items-start gap-3">
         <button
-          onClick={() => navigate('/')}
-          className="p-2 rounded-xl bg-court hover:bg-slate-800 text-slate-300 transition-colors border border-hairline"
-          aria-label="Takaisin etusivulle"
+          onClick={() => navigate(-1)}
+          className="p-2.5 rounded-xl bg-court hover:bg-slate-800 text-slate-300 transition-colors border border-hairline"
+          aria-label="Takaisin"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">{teamName}</h1>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              Basket.fi
-            </span>
-          </div>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">{teamName}</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            {profile?.clubName ? `${profile.clubName} • ` : ''}{categoryName}
+            {[profile.clubName, profile.categoryName].filter(Boolean).join(' · ')}
           </p>
-          {profile?.clubId ? (
+          {profile.clubId ? (
             <button
               type="button"
               onClick={() => navigate(`/club/${profile.clubId}`)}
-              className="text-[11px] font-semibold text-ice mt-1"
+              className="text-xs font-semibold text-ice mt-1 min-h-11"
             >
-              Avaa seura →
+              Seuran joukkueet →
             </button>
           ) : null}
         </div>
@@ -146,271 +134,123 @@ export function TeamPage() {
               kind: 'team',
               id: teamId,
               name: teamName,
-              subtitle: [profile?.clubName, categoryName].filter(Boolean).join(' · '),
+              subtitle: [profile.clubName, profile.categoryName].filter(Boolean).join(' · '),
             })
           }
-          className={`p-2 rounded-full border shrink-0 ${fav ? 'border-rose-400 text-rose-400' : 'border-slate-700 text-slate-400'}`}
+          className={`p-2.5 rounded-full border shrink-0 ${fav ? 'border-rose-400 text-rose-400' : 'border-slate-700 text-slate-400'}`}
           aria-label={fav ? 'Poista suosikeista' : 'Lisää suosikkeihin'}
         >
           <Heart className={`w-5 h-5 ${fav ? 'fill-current' : ''}`} />
         </button>
       </div>
 
-      {/* Season & Half Selector (Syksy 2026, Kevät 2026, Koko vuosi) */}
-      <div className="bg-court rounded-2xl p-3 sm:p-4 border border-hairline flex flex-wrap items-center justify-between gap-3 shadow-md">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mr-1">
-            Kausi:
-          </span>
-          <button
-            type="button"
-            onClick={() => { setSelectedSeason('syksy'); setSelectedYear('2026') }}
-            className={clsx(
-              'text-xs px-3 py-1.5 rounded-xl font-bold transition-all',
-              selectedSeason === 'syksy' && selectedYear === '2026'
-                ? 'bg-lane text-ice shadow-md border border-accent/40'
-                : 'text-slate-400 hover:text-slate-200 bg-canvas'
-            )}
-          >
-            Syksy 2026
-          </button>
-          <button
-            type="button"
-            onClick={() => { setSelectedSeason('kevat'); setSelectedYear('2026') }}
-            className={clsx(
-              'text-xs px-3 py-1.5 rounded-xl font-bold transition-all',
-              selectedSeason === 'kevat' && selectedYear === '2026'
-                ? 'bg-lane text-ice shadow-md border border-accent/40'
-                : 'text-slate-400 hover:text-slate-200 bg-canvas'
-            )}
-          >
-            Kevät 2026
-          </button>
-          <button
-            type="button"
-            onClick={() => { setSelectedSeason('all'); setSelectedYear('2026') }}
-            className={clsx(
-              'text-xs px-3 py-1.5 rounded-xl font-bold transition-all',
-              selectedSeason === 'all'
-                ? 'bg-lane text-ice shadow-md border border-accent/40'
-                : 'text-slate-400 hover:text-slate-200 bg-canvas'
-            )}
-          >
-            Koko vuosi
-          </button>
+      {seasons.length > 1 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {seasons.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setSeason(s)}
+              className={clsx('chip whitespace-nowrap', season === s && 'chip-active')}
+            >
+              Kausi {s}
+            </button>
+          ))}
         </div>
+      )}
 
-        <div className="text-xs text-slate-400 font-medium">
-          {filteredFixtures.length} ottelua valittuna
-        </div>
+      <div className="flex items-center gap-1.5 border-b border-hairline pb-1 text-xs font-semibold overflow-x-auto">
+        {(
+          [
+            { id: 'schedule', label: `Ottelut (${inSeason.length})`, icon: Calendar },
+            { id: 'roster', label: `Pelaajat (${profile.players.length})`, icon: Users },
+            { id: 'standings', label: 'Sarjataulukko', icon: Trophy },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.id}
+            onClick={() => handleTabChange(t.id)}
+            className={clsx(
+              'flex items-center gap-1.5 px-3.5 min-h-11 rounded-xl transition-all whitespace-nowrap',
+              activeTab === t.id ? 'bg-lane text-ice' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60',
+            )}
+          >
+            <t.icon className="w-3.5 h-3.5" />
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* Main Tabs */}
-      <div className="flex items-center gap-2 border-b border-hairline pb-1 text-xs font-semibold">
-        <button
-          onClick={() => handleTabChange('schedule')}
-          className={clsx(
-            'flex items-center gap-1.5 px-4 py-2 rounded-xl transition-all',
-            activeTab === 'schedule'
-              ? 'bg-lane text-ice shadow-md font-bold'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-          )}
-        >
-          <Calendar className="w-3.5 h-3.5" />
-          Ottelut ({filteredFixtures.length})
-        </button>
-        <button
-          onClick={() => handleTabChange('roster')}
-          className={clsx(
-            'flex items-center gap-1.5 px-4 py-2 rounded-xl transition-all',
-            activeTab === 'roster'
-              ? 'bg-lane text-ice shadow-md font-bold'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-          )}
-        >
-          <Users className="w-3.5 h-3.5" />
-          Kokoonpano ({profile?.players?.length || 0})
-        </button>
-        <button
-          onClick={() => handleTabChange('standings')}
-          className={clsx(
-            'flex items-center gap-1.5 px-4 py-2 rounded-xl transition-all',
-            activeTab === 'standings'
-              ? 'bg-lane text-ice shadow-md font-bold'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-          )}
-        >
-          <Trophy className="w-3.5 h-3.5 text-amber-400" />
-          Sarjataulukko
-        </button>
-      </div>
-
-      {/* Tab 1: Ottelut (Upcoming & Played) */}
       {activeTab === 'schedule' && (
-        <div className="space-y-6">
-          {/* Upcoming Matches */}
-          {upcomingMatches.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-accent animate-pulse" />
-                Tulevat ottelut ({upcomingMatches.length})
-              </h3>
-              <div className="space-y-2">
-                {upcomingMatches.map((m) => (
-                  <div
-                    key={m.matchId}
-                    onClick={() => navigate(`/match/${m.matchId}`)}
-                    className="p-3.5 rounded-2xl bg-court border border-hairline hover:border-accent/70 transition-all cursor-pointer flex items-center justify-between shadow-sm group"
-                  >
-                    <div className="min-w-0 flex-1 pr-3">
-                      <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                        <span className="font-semibold text-slate-300">{m.date}</span>
-                        <span>•</span>
-                        <span>klo {m.time ? m.time.slice(0, 5) : 'Ilmoitetaan'}</span>
-                        <span>•</span>
-                        <span className="truncate max-w-[140px] text-slate-500">{m.categoryName}</span>
-                      </div>
-                      <div className="font-bold text-xs sm:text-sm text-slate-100 group-hover:text-ice transition-colors mt-1">
-                        <span className={m.isHome ? 'text-ice' : ''}>{m.homeTeam}</span>
-                        <span className="text-slate-500 mx-2 font-normal">vs</span>
-                        <span className={!m.isHome ? 'text-ice' : ''}>{m.awayTeam}</span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-1">
-                        <MapPin className="w-3 h-3 text-accent" />
-                        <span className="truncate max-w-[240px]">{m.venueName}</span>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 flex items-center gap-2">
-                      <span className="text-xs font-bold text-ice bg-lane/40 px-3 py-1.5 rounded-xl border border-accent/30">
-                        Ennakko →
-                      </span>
-                    </div>
-                  </div>
+        <div className="space-y-5">
+          {(
+            [
+              ['Käynnissä', groups.live],
+              ['Tulevat', groups.upcoming],
+              ['Pelatut', groups.played],
+              ['Muut', groups.other],
+            ] as const
+          ).map(([title, list]) =>
+            list.length ? (
+              <section key={title} className="space-y-2">
+                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  {title} ({list.length})
+                </h2>
+                {list.map((f) => (
+                  <MatchRow key={f.matchId} fixture={f} highlightTeamId={teamId} onOpen={(id) => navigate(`/match/${id}`)} />
                 ))}
-              </div>
-            </div>
+              </section>
+            ) : null,
           )}
-
-          {/* Played Matches */}
-          {playedMatches.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                Pelatut ottelut ({playedMatches.length})
-              </h3>
-              <div className="space-y-2">
-                {playedMatches.map((m) => (
-                  <div
-                    key={m.matchId}
-                    onClick={() => navigate(`/match/${m.matchId}`)}
-                    className="p-3.5 rounded-2xl bg-court border border-hairline hover:border-accent/70 transition-all cursor-pointer flex items-center justify-between shadow-sm group"
-                  >
-                    <div className="min-w-0 flex-1 pr-3">
-                      <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                        <span>{m.date}</span>
-                        <span>•</span>
-                        <span className="truncate max-w-[140px] text-slate-500">{m.categoryName}</span>
-                      </div>
-                      <div className="font-bold text-xs sm:text-sm text-slate-100 group-hover:text-ice transition-colors mt-1">
-                        <span className={m.isHome ? 'text-ice' : ''}>{m.homeTeam}</span>
-                        <span className="text-slate-500 mx-2 font-normal">vs</span>
-                        <span className={!m.isHome ? 'text-ice' : ''}>{m.awayTeam}</span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-1">
-                        <MapPin className="w-3 h-3 text-slate-500" />
-                        <span className="truncate max-w-[240px]">{m.venueName}</span>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 flex flex-col items-end gap-1">
-                      <span className="font-mono font-black text-sm sm:text-base text-white bg-canvas px-3 py-1 rounded-xl border border-slate-700">
-                        {m.score}
-                      </span>
-                      {m.isWin && (
-                        <span className="text-[10px] font-bold text-emerald-400">Voitto (V)</span>
-                      )}
-                      {m.isLoss && (
-                        <span className="text-[10px] font-bold text-rose-400">Tappio (H)</span>
-                      )}
-                      {m.isDraw && (
-                        <span className="text-[10px] font-bold text-amber-400">Tasapeli (T)</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {filteredFixtures.length === 0 && (
-            <div className="py-12 text-center bg-court rounded-2xl border border-hairline text-slate-400 text-xs">
-              Ei otteluita valitulle kaudelle ({selectedSeason === 'syksy' ? 'Syksy 2026' : selectedSeason === 'kevat' ? 'Kevät 2026' : '2026'}).
-            </div>
+          {inSeason.length === 0 && (
+            <p className="py-10 text-center text-sm text-slate-500">
+              Basket.fi:ssä ei ole tämän joukkueen otteluita{season ? ` kaudella ${season}` : ''}.
+            </p>
           )}
         </div>
       )}
 
-      {/* Tab 2: Kokoonpano (Roster) */}
       {activeTab === 'roster' && (
-        <div className="bg-court rounded-2xl p-5 border border-hairline shadow-xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-hairline">
-            <h3 className="font-bold text-sm text-white">
-              Joukkueen Pelaajat & Tehopisteet ({profile?.players?.length || 0})
-            </h3>
-            <span className="text-xs text-slate-400">PTS · AST · 3P · Virheet</span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="text-[11px] uppercase tracking-wider text-slate-400 bg-canvas/60 border-b border-hairline">
-                <tr>
-                  <th className="py-2.5 px-3">#</th>
-                  <th className="py-2.5 px-3">Pelaaja</th>
-                  <th className="py-2.5 px-3 text-center">Synt.</th>
-                  <th className="py-2.5 px-3 text-right">PTS</th>
-                  <th className="py-2.5 px-3 text-right">AST</th>
-                  <th className="py-2.5 px-3 text-right font-bold text-ice">3P</th>
-                  <th className="py-2.5 px-3 text-right">Virheet</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {(profile?.players || []).map((p) => (
-                  <tr key={p.playerId} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-2.5 px-3 font-mono font-bold text-slate-300">
-                      {p.shirtNumber ? `#${p.shirtNumber}` : '-'}
-                    </td>
-                    <td
-                      className="py-2.5 px-3 font-semibold text-white cursor-pointer hover:text-ice"
+        <div className="bg-court rounded-2xl p-4 border border-hairline space-y-3">
+          <p className="text-xs text-slate-400">
+            Pelaajalista Basket.fi:stä. Pisteet näkyvät kunkin ottelun sivulla, kun pöytäkirja on tallennettu.
+          </p>
+          {profile.players.length === 0 ? (
+            <p className="text-sm text-slate-500">Basket.fi ei näytä tälle joukkueelle pelaajalistaa.</p>
+          ) : (
+            <ul className="divide-y divide-hairline/60">
+              {[...profile.players]
+                .sort((a, b) => Number(a.shirtNumber || 999) - Number(b.shirtNumber || 999))
+                .map((p) => (
+                  <li key={p.playerId || p.fullName}>
+                    <button
+                      type="button"
+                      disabled={!p.playerId}
                       onClick={() => navigate(`/player/${p.playerId}`)}
+                      className="w-full flex items-center justify-between gap-3 py-2.5 min-h-11 text-left"
                     >
-                      {p.fullName}
-                      {p.isCaptain && (
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                          C
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-slate-400">{p.birthYear || '-'}</td>
-                    <td className="py-2.5 px-3 text-right text-slate-200">{p.points}</td>
-                    <td className="py-2.5 px-3 text-right text-slate-200">{p.assists}</td>
-                    <td className="py-2.5 px-3 text-right font-black text-ice">{p.threePointers}</td>
-                    <td className="py-2.5 px-3 text-right text-slate-400">{p.fouls}</td>
-                  </tr>
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="w-8 font-mono text-slate-400 text-xs">{p.shirtNumber ? `#${p.shirtNumber}` : ''}</span>
+                        <span className="font-semibold text-sm text-white truncate">{p.fullName}</span>
+                        {p.isCaptain ? (
+                          <span className="text-[9px] font-bold px-1 rounded bg-amber-500/20 text-amber-300">C</span>
+                        ) : null}
+                      </span>
+                      <span className="text-xs text-slate-500">{p.birthYear || ''}</span>
+                    </button>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          </div>
+            </ul>
+          )}
         </div>
       )}
 
-      {/* Tab 3: Sarjataulukko */}
-      {activeTab === 'standings' && (
-        <BasketStandingsTable
-          standings={standings}
-          highlightTeamId={teamId}
-        />
-      )}
+      {activeTab === 'standings' &&
+        (standingsFailed ? (
+          <LoadError what="Sarjataulukkoa" onRetry={() => void load()} />
+        ) : (
+          <BasketStandingsTable standings={standings} highlightTeamId={teamId} />
+        ))}
     </div>
   )
 }

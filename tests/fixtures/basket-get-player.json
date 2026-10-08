@@ -1,0 +1,97 @@
+{
+ "call": {
+  "status": "OK"
+ },
+ "player": {
+  "player_id": "16639",
+  "first_name": "Etu639",
+  "last_name": "Suku639",
+  "club_id": "1447",
+  "club_name": "Leppävaaran Pyrintö",
+  "birthyear": "2012",
+  "age": 14,
+  "img_url": "",
+  "teams": [
+   {
+    "team_id": "5756060",
+    "team_name": "LePy",
+    "club_name": "Leppävaaran Pyrintö",
+    "shirt_number": "4",
+    "primary_category": {
+     "competition_id": "vk2627",
+     "category_id": "35453",
+     "competition_name": "Valtakunnalliset kilpakoripallosarjat 2026-27",
+     "category_name": "15-vuotiaat pojat, Robert Petersen Cup",
+     "sport_id": ""
+    }
+   },
+   {
+    "team_id": "5751397",
+    "team_name": "LePy",
+    "club_name": "Leppävaaran Pyrintö",
+    "shirt_number": "4",
+    "primary_category": {
+     "competition_id": "etekp2627",
+     "category_id": "85",
+     "competition_name": "Eteläinen alue 2026-27",
+     "category_name": "16-vuotiaat pojat I divisioona Eteläinen alue",
+     "sport_id": ""
+    }
+   }
+  ],
+  "matches": [],
+  "upcoming": [
+   {
+    "match_id": "1012822",
+    "date": "2026-10-18",
+    "time": "14:00:00",
+    "status": "Fixture",
+    "fs_A": "",
+    "fs_B": "",
+    "team_A_id": "HoNsU",
+    "team_A_name": "HoNsU",
+    "team_B_id": "LePy",
+    "team_B_name": "LePy",
+    "team_id": "0",
+    "category_name": "15-vuotiaat pojat, Robert Petersen Cup",
+    "competition_name": "Valtakunnalliset kilpakoripallosarjat 2026-27",
+    "venue_name": "Kypärämäen koulu",
+    "player_points": "0"
+   },
+   {
+    "match_id": "1009812",
+    "date": "2026-10-24",
+    "time": "14:30:00",
+    "status": "Fixture",
+    "fs_A": "",
+    "fs_B": "",
+    "team_A_id": "Puhu White",
+    "team_A_name": "Puhu White",
+    "team_B_id": "LePy",
+    "team_B_name": "LePy",
+    "team_id": "0",
+    "category_name": "16-vuotiaat pojat I divisioona Eteläinen alue",
+    "competition_name": "Eteläinen alue 2026-27",
+    "venue_name": "Kartanonkosken koulu",
+    "player_points": "0"
+   },
+   {
+    "match_id": "1009813",
+    "date": "2026-10-31",
+    "time": "14:00:00",
+    "status": "Fixture",
+    "fs_A": "",
+    "fs_B": "",
+    "team_A_id": "LePy",
+    "team_A_name": "LePy",
+    "team_B_id": "Torpan Pojat",
+    "team_B_name": "Torpan Pojat",
+    "team_id": "0",
+    "category_name": "16-vuotiaat pojat I divisioona Eteläinen alue",
+    "competition_name": "Eteläinen alue 2026-27",
+    "venue_name": "Karakallion koulu",
+    "player_points": "0"
+   }
+  ]
+ }
+}

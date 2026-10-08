@@ -9,16 +9,13 @@ Status: **component catalog 2026-09-26**. Every file under `src/components/`. Sc
 | `CourtMark.tsx` | Header, Home | Court glyph | Identity mark. Not a score |
 | `WebMcpBadge.tsx` | Header | Native host vs polyfill | Not a dataset. Do not overwrite `document.modelContext` |
 | `BottomNav.tsx` | Layout | Etusivu, Selaa, Haku, Suosikit | Selaa is `/browse`, not one competition |
-| `BasketStandingsTable.tsx` | Group, team, match | Sarjataulukko & Kuntopuntari, Basket.fi, O-style columns, Korit, Ero, Pisteet, Kunto dots V/T/H | Official table. Letters are Finnish, not W/D/L |
-| `QuarterScoreCard.tsx` | Match | Quarter lines, Joukkue | Period score. Empty until TASO has quarters |
-| `BasketRosterCards.tsx` | Match Kokoonpano | Player cards, PTS, AST | Who played and what they scored |
-| `BasketScorersTable.tsx` | Match Pistetilasto | Pisteet (PTS). Empty copy if the game has no player points | Do not invent a points row |
-| `TeamFoulTracker.tsx` | Match Virheet & Bonus | Team fouls, Bonus 5. virheestä | Basketball only. Do not delete it to match floorball |
-| `BasketPreviewExport.tsx` | Match Jaa | Share card for a parent chat | Export. Not a live score feed |
+| `BasketStandingsTable.tsx` | Group, team, match | Sarjataulukko, O/V/H, Korit, Ero, Pisteet, Viimeiset V/H | Table as published by Basket.fi. No invented points rule |
+| `QuarterScoreCard.tsx` | Match | Score or state badge, Q1–Q4 (+JA), live team fouls | Blank periods stay blank |
+| `MatchRow.tsx` | Team, group, player | One game: Helsinki time, teams, score or state | Same rules everywhere |
+| `MatchState.tsx` | Rows, match card | Lopputulos / Tuleva / Luovutus / Ei tulosta / Siirretty / … | From `utils/matchStatus.ts` |
+| `LoadError.tsx` | Every data page | "Haku epäonnistui" + retry | A failed call is never shown as "no games" |
+| `BasketRosterCards.tsx` | Match Kokoonpano | Lineup with recorded points/fouls, or labelled team lists | No PTS/AST boxes for players without stats |
+| `BasketScorersTable.tsx` | Match Pisteet | PTS, 3P (from events), fouls | Only when TASO recorded the lineup |
+| `BasketPreviewExport.tsx` | Match Jaa | Markdown of the real data | No predictions, no team-foul guesses |
 
-## Unmounted — do not wire unless a page is actually missing the job
-
-| File | What it would show | Why it is unused |
-|---|---|---|
-| `BasketScheduleView.tsx` | Valitse ottelu list | Team page already lists fixtures |
-| `BasketTeamOnboarding.tsx` | Lisää oma joukkue form, saved teams | Home is search and browse, not a saved-team wizard |
+Removed 2026-10-08: `TeamFoulTracker.tsx` (0/5 for every finished game), `BasketTeamOnboarding.tsx` (four made-up default teams), `BasketScheduleView.tsx` (unused, printed "Tuleva" for every game without a score).

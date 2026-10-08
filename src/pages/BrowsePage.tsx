@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchBasketCompetitions } from '../services/basketApi'
 import type { BasketCompetition } from '../types/basketball'
+import { LoadError } from '../components/LoadError'
 
 const FILTERS = [
   { id: 'all', label: 'Kaikki' },
@@ -16,19 +17,24 @@ export function BrowsePage() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('all')
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
+    setLoading(true)
+    setFailed(false)
     fetchBasketCompetitions()
       .then(setComps)
+      .catch(() => setFailed(true))
       .finally(() => setLoading(false))
-  }, [])
+  }, [attempt])
 
   const visible = useMemo(() => {
     const needle = q.trim().toLowerCase()
     return comps.filter((c) => {
       const hay = `${c.competitionName} ${c.organiser || ''} ${c.seasonId}`.toLowerCase()
       if (needle && !hay.includes(needle)) return false
-      if (filter === 'etela') return hay.includes('etelä') || hay.includes('etela') || c.competitionId.includes('es')
+      if (filter === 'etela') return hay.includes('etelä') || hay.includes('etela') || c.competitionId.startsWith('ete')
       if (filter === 'liiga') return hay.includes('liiga')
       if (filter === 'nuoret') return /u1[0-9]|p1[0-9]|junior|pojat|tytöt|tytot|nuor|alue/i.test(hay)
       return true
@@ -61,11 +67,11 @@ export function BrowsePage() {
       </div>
       {loading ? (
         <div className="animate-pulse h-24 rounded-2xl bg-court" />
+      ) : failed ? (
+        <LoadError what="Kilpailuja" onRetry={() => setAttempt((n) => n + 1)} />
       ) : visible.length === 0 ? (
         <p className="text-sm text-slate-500">
-          {comps.length === 0
-            ? 'Sarjoja ei saatu Basket.fistä. Kokeile hetken päästä uudelleen.'
-            : 'Ei kilpailuja tällä suodattimella.'}
+          {comps.length === 0 ? 'Basket.fi ei näytä yhtään käynnissä olevaa kilpailua.' : 'Ei kilpailuja tällä suodattimella.'}
         </p>
       ) : (
         <div className="space-y-2">
