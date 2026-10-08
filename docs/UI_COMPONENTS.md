@@ -17,5 +17,8 @@ Status: **component catalog 2026-09-26**. Every file under `src/components/`. Sc
 | `BasketRosterCards.tsx` | Match Kokoonpano | Lineup with recorded points/fouls, or labelled team lists | No PTS/AST boxes for players without stats |
 | `BasketScorersTable.tsx` | Match Pisteet | PTS, 3P (from events), fouls | Only when TASO recorded the lineup |
 | `BasketPreviewExport.tsx` | Match Jaa | Markdown of the real data | No predictions, no team-foul guesses |
+| `FavoriteButton.tsx` | Search results, team/player/club pages | Heart toggle | Saved in localStorage (`basket.favorites.v1`), shared store |
+| `FavoritesList.tsx` | Home, Suosikit | Saved teams, players, clubs; each opens the app's own page | Favourites one tap from Home |
+| `FederationLink.tsx` | Match, team, club, group | Small "… Basket.fi-tulospalvelussa ↗" link | Exact tulospalvelu.basket.fi page; none for players (no such page) |
 
 Removed 2026-10-08: `TeamFoulTracker.tsx` (0/5 for every finished game), `BasketTeamOnboarding.tsx` (four made-up default teams), `BasketScheduleView.tsx` (unused, printed "Tuleva" for every game without a score).

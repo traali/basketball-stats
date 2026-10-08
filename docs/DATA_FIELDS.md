@@ -51,7 +51,13 @@ Live = a Live/Break status **on today's Helsinki date**. Older ones are "Tulos v
 | getTeam `players[]` | name, shirt, birthyear | every stat field is `""` |
 | getPlayer | profile, teams + shirt numbers, `upcoming[]` | `matches[]` is empty for basketball |
 | getMatches?player_id | `call.status: error` (not supported) | — |
-| getTeams | `teams: []` (empty) | — |
+| getTeams | empty without filters; `getTeams?competition_id&category_id` lists that category's teams | — |
+| getPlayers | `call.error: "Unkown method"` — no player name search for basketball | — |
+
+Search (src/services/basketSearch.ts): getClubs (all ~200 clubs) → getClub teams
+(`status:"active"` and `primary_category.competition_active:"1"` = this season) → getTeam
+rosters for a player name typed after the club («Pyrintö Virtanen»). A bare name is looked up
+only in saved favourite teams. Numbers are looked up with getMatch/getTeam/getPlayer.
 
 Honest calculations:
 - 3-pointers per player = count of `maali` events whose description starts with `3`

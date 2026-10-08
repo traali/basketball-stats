@@ -1,112 +1,175 @@
 {
- "call": {
-  "status": "ok"
- },
- "club": {
-  "club_id": "1447",
-  "name": "Leppävaaran Pyrintö",
-  "abbrevation": "LePy",
-  "city_name": "Espoo",
-  "crest": "https://cdn.torneopal.net/logo/koripallo/1447x.png",
-  "www": "https://www.lepy.fi",
-  "home_venue_name": "Karakallion koulu",
-  "teams": [
-   {
-    "team_id": "5000151",
-    "team_name": "LePy",
-    "yob": "U12",
-    "age_group": "U12",
-    "gender_fi": "Mies",
-    "status": "active",
-    "primary_category": {
-     "competition_id": "etekp2627",
-     "competition_name": "Eteläinen alue 2026-27",
-     "competition_season": "2026-2027",
-     "category_id": "35421",
-     "category_name": "12-vuotiaat pojat III divisioona Eteläinen alue",
-     "group_id": null
-    }
-   },
-   {
-    "team_id": "5000153",
-    "team_name": "LePy",
-    "yob": "U13",
-    "age_group": "U13",
-    "gender_fi": "Mies",
-    "status": "active",
-    "primary_category": {
-     "competition_id": "etekp2627",
-     "competition_name": "Eteläinen alue 2026-27",
-     "competition_season": "2026-2027",
-     "category_id": "38775",
-     "category_name": "13-vuotiaat pojat II divisioona Eteläinen alue",
-     "group_id": null
-    }
-   },
-   {
-    "team_id": "5000155",
-    "team_name": "LePy",
-    "yob": "U13",
-    "age_group": "U13",
-    "gender_fi": "Mies",
-    "status": "active",
-    "primary_category": {
-     "competition_id": "etekp2627",
-     "competition_name": "Eteläinen alue 2026-27",
-     "competition_season": "2026-2027",
-     "category_id": "38777",
-     "category_name": "13-vuotiaat pojat III divisioona Eteläinen alue",
-     "group_id": null
-    }
-   },
-   {
-    "team_id": "5000199",
-    "team_name": "LePy",
-    "yob": "U14",
-    "age_group": "U14",
-    "gender_fi": "Nainen",
-    "status": "active",
-    "primary_category": {
-     "competition_id": "etekp2627",
-     "competition_name": "Eteläinen alue 2026-27",
-     "competition_season": "2026-2027",
-     "category_id": "38767",
-     "category_name": "14-vuotiaat tytöt I divisioona Eteläinen alue",
-     "group_id": null
-    }
-   },
-   {
-    "team_id": "5753363",
-    "team_name": "LePy",
-    "yob": "U17",
-    "age_group": "U17",
-    "gender_fi": "Mies",
-    "status": "archived",
-    "primary_category": {
-     "competition_id": "2024-2025",
-     "competition_name": "Valtakunnalliset sarjat 2024-25",
-     "competition_season": "2024-2025",
-     "category_id": "35437",
-     "category_name": "17-vuotiaat pojat, valtakunn. I divisioona",
-     "group_id": null
-    }
-   },
-   {
-    "team_id": "5754845",
-    "team_name": "LePy",
-    "yob": "",
-    "age_group": "",
-    "gender_fi": "Mies",
-    "status": "archived",
-    "primary_category": {
-     "competition_id": "2024-2025",
-     "competition_name": "Valtakunnalliset sarjat 2024-25",
-     "competition_season": "2024-2025",
-     "category_id": "35069",
-     "category_name": "16-vuotiaat pojat, nousukarsinta",
-     "group_id": null
-    }
-   }
-  ]
- }
+  "call": {
+    "parameters": {},
+    "logged_in": false,
+    "method": "getClub",
+    "status": "ok",
+    "result_time": 0.311,
+    "apilevel": "1",
+    "time_stamp": 1791432242
+  },
+  "club": {
+    "club_id": "1447",
+    "name": "Leppävaaran Pyrintö",
+    "abbrevation": "LePy",
+    "city_name": "Espoo",
+    "crest": "https://cdn.torneopal.net/logo/koripallo/1447x.png",
+    "home_venue_name": "Karakallion koulu",
+    "www": "https://www.lepy.fi",
+    "teams": [
+      {
+        "team_id": "5000151",
+        "team_name": "LePy",
+        "yob": "U12",
+        "age_group": "U12",
+        "gender_fi": "Mies",
+        "status": "active",
+        "primary_category": {
+          "competition_id": "etekp2627",
+          "competition_name": "Eteläinen alue 2026-27",
+          "competition_season": "2026-2027",
+          "competition_active": "1",
+          "category_id": "35421",
+          "category_name": "12-vuotiaat pojat III divisioona Eteläinen alue",
+          "category_age_group": "U12"
+        }
+      },
+      {
+        "team_id": "5000153",
+        "team_name": "LePy",
+        "yob": "U13",
+        "age_group": "U13",
+        "gender_fi": "Mies",
+        "status": "active",
+        "primary_category": {
+          "competition_id": "etekp2627",
+          "competition_name": "Eteläinen alue 2026-27",
+          "competition_season": "2026-2027",
+          "competition_active": "1",
+          "category_id": "38775",
+          "category_name": "13-vuotiaat pojat II divisioona Eteläinen alue",
+          "category_age_group": "U13"
+        }
+      },
+      {
+        "team_id": "5000155",
+        "team_name": "LePy",
+        "yob": "U13",
+        "age_group": "U13",
+        "gender_fi": "Mies",
+        "status": "active",
+        "primary_category": {
+          "competition_id": "etekp2627",
+          "competition_name": "Eteläinen alue 2026-27",
+          "competition_season": "2026-2027",
+          "competition_active": "1",
+          "category_id": "38777",
+          "category_name": "13-vuotiaat pojat III divisioona Eteläinen alue",
+          "category_age_group": "U13"
+        }
+      },
+      {
+        "team_id": "5000199",
+        "team_name": "LePy",
+        "yob": "U14",
+        "age_group": "U14",
+        "gender_fi": "Nainen",
+        "status": "active",
+        "primary_category": {
+          "competition_id": "etekp2627",
+          "competition_name": "Eteläinen alue 2026-27",
+          "competition_season": "2026-2027",
+          "competition_active": "1",
+          "category_id": "38767",
+          "category_name": "14-vuotiaat tytöt I divisioona Eteläinen alue",
+          "category_age_group": "U14"
+        }
+      },
+      {
+        "team_id": "5000200",
+        "team_name": "LePy",
+        "yob": "U14",
+        "age_group": "U14",
+        "gender_fi": "Nainen",
+        "status": "active",
+        "primary_category": {
+          "competition_id": "etekp2627",
+          "competition_name": "Eteläinen alue 2026-27",
+          "competition_season": "2026-2027",
+          "competition_active": "1",
+          "category_id": "38769",
+          "category_name": "14-vuotiaat tytöt II divisioona Eteläinen alue",
+          "category_age_group": "U14"
+        }
+      },
+      {
+        "team_id": "5750422",
+        "team_name": "LePy",
+        "yob": "U16",
+        "age_group": "U16",
+        "gender_fi": "Mies",
+        "status": "active",
+        "primary_category": {
+          "competition_id": "etekp2526",
+          "competition_name": "Eteläinen alue 2025-26",
+          "competition_season": "2025-2026",
+          "competition_active": "0",
+          "category_id": "85",
+          "category_name": "16-vuotiaat pojat I divisioona Eteläinen alue",
+          "category_age_group": "U16"
+        }
+      },
+      {
+        "team_id": "5751397",
+        "team_name": "LePy",
+        "yob": "U16",
+        "age_group": "U16",
+        "gender_fi": "Mies",
+        "status": "active",
+        "primary_category": {
+          "competition_id": "etekp2627",
+          "competition_name": "Eteläinen alue 2026-27",
+          "competition_season": "2026-2027",
+          "competition_active": "1",
+          "category_id": "85",
+          "category_name": "16-vuotiaat pojat I divisioona Eteläinen alue",
+          "category_age_group": "U16"
+        }
+      },
+      {
+        "team_id": "5753363",
+        "team_name": "LePy",
+        "yob": "U17",
+        "age_group": "U17",
+        "gender_fi": "Mies",
+        "status": "archived",
+        "primary_category": {
+          "competition_id": "2024-2025",
+          "competition_name": "Valtakunnalliset sarjat 2024-25",
+          "competition_season": "2024-2025",
+          "competition_active": "0",
+          "category_id": "35437",
+          "category_name": "17-vuotiaat pojat, valtakunn. I divisioona",
+          "category_age_group": "U17"
+        }
+      },
+      {
+        "team_id": "5754845",
+        "team_name": "LePy",
+        "yob": "",
+        "age_group": "",
+        "gender_fi": "Mies",
+        "status": "archived",
+        "primary_category": {
+          "competition_id": "2024-2025",
+          "competition_name": "Valtakunnalliset sarjat 2024-25",
+          "competition_season": "2024-2025",
+          "competition_active": "0",
+          "category_id": "35069",
+          "category_name": "16-vuotiaat pojat, nousukarsinta",
+          "category_age_group": "U16"
+        }
+      }
+    ]
+  }
 }

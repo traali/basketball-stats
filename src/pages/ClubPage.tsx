@@ -5,6 +5,8 @@ import { fetchBasketClub } from '../services/basketApi'
 import type { BasketClubDetail, BasketClubTeam } from '../types/basketball'
 import { useFavorites } from '../hooks/useFavorites'
 import { LoadError } from '../components/LoadError'
+import { FederationLink } from '../components/FederationLink'
+import { federationClubUrl } from '../utils/federationLinks'
 
 function TeamButton({ t, onOpen }: { t: BasketClubTeam; onOpen: (id: string) => void }) {
   return (
@@ -74,6 +76,7 @@ export function ClubPage() {
           </button>
           <h1 className="text-2xl font-semibold tracking-tight">{club.name}</h1>
           <p className="text-xs text-slate-400">{[club.cityName, club.venueName].filter(Boolean).join(' · ')}</p>
+          <FederationLink href={federationClubUrl(club.clubId)} label="Seura Basket.fi-tulospalvelussa" />
         </div>
         <button
           type="button"

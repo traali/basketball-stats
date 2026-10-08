@@ -209,7 +209,7 @@ const TOOLS: ModelContextTool[] = [
     name: 'search_basketball',
     title: 'Search Basket.fi',
     description:
-      'Search Finnish basketball on Basket.fi / Koripalloliitto. Pass a club or team name (Honka, HNMKY, ToPo), an age group (U14), a player, or a tulospalvelu.basket.fi URL.',
+      'Search Finnish basketball on Basket.fi / Koripalloliitto. Pass a club or team name (Honka, HNMKY, ToPo), an age group (U14), a player together with the club (e.g. «Pyrintö Virtanen»; Basket.fi has no player name search), or a tulospalvelu.basket.fi URL.',
     inputSchema: {
       type: 'object',
       properties: {

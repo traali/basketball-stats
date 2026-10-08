@@ -1,66 +1,26 @@
-import { useCallback, useEffect, useState } from 'react'
-import { parseFederationTeamId } from '../utils/teamSelection'
+import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import { favoritesStore, type FavKind, type FavoriteItem } from '../utils/favoritesStore'
 
-export type FavKind = 'team' | 'player' | 'club'
+export type { FavKind, FavoriteItem }
 
-export interface FavoriteItem {
-  kind: FavKind
-  id: string
-  name: string
-  subtitle?: string
-}
-
-const KEY = 'basket.favorites.v1'
-
-function read(): FavoriteItem[] {
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((item) => {
-      if (!item || typeof item !== 'object') return false
-      const favorite = item as FavoriteItem
-      if (!favorite.kind || !favorite.id || !favorite.name) return false
-      if (favorite.kind === 'team') return Boolean(parseFederationTeamId(favorite.id))
-      return true
-    })
-  } catch {
-    return []
-  }
-}
-
-function write(items: FavoriteItem[]) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(items.slice(0, 40)))
-  } catch {
-    /* quota */
-  }
-}
+const EMPTY: FavoriteItem[] = []
+let persistAsked = false
 
 export function useFavorites() {
-  const [favorites, setFavorites] = useState<FavoriteItem[]>([])
+  const favorites = useSyncExternalStore(favoritesStore.subscribe, favoritesStore.get, () => EMPTY)
 
   useEffect(() => {
-    setFavorites(read())
-  }, [])
+    if (persistAsked || favorites.length === 0) return
+    persistAsked = true
+    // Ask the browser not to clear saved favourites under storage pressure.
+    void navigator.storage?.persist?.().catch(() => undefined)
+  }, [favorites.length])
 
   const isFavorite = useCallback(
     (kind: FavKind, id: string) => favorites.some((f) => f.kind === kind && f.id === id),
     [favorites],
   )
-
-  const toggle = useCallback((item: FavoriteItem) => {
-    if (item.kind === 'team' && !parseFederationTeamId(item.id)) return
-    setFavorites((current) => {
-      const exists = current.some((f) => f.kind === item.kind && f.id === item.id)
-      const next = exists
-        ? current.filter((f) => !(f.kind === item.kind && f.id === item.id))
-        : [item, ...current]
-      write(next)
-      return next
-    })
-  }, [])
+  const toggle = useCallback((item: FavoriteItem) => favoritesStore.toggle(item), [])
 
   return { favorites, isFavorite, toggle }
 }
