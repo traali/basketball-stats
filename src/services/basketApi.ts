@@ -36,6 +36,7 @@ import {
   type MatchState,
 } from '../utils/matchStatus.ts'
 import { formatGameDateTime } from '../utils/formatFi.ts'
+import { cachedRoster, createRosterCache } from '../utils/rosterCache.ts'
 import {
   normalizeSearch,
   searchBasket,
@@ -295,22 +296,105 @@ export function mapLineupPlayer(
   }
 }
 
+export interface ScoringEvent {
+  eventId: string
+  period: string
+  side: 'home' | 'away'
+  points: number
+  playerId: string
+}
+
 /**
- * Three-pointers per player from TASO scoring events: code "maali",
- * description "<points> <home>-<away>". Returns null when the game has no
- * scoring events with players (then 3P is unknown, not 0).
+ * Scoring rows ("maali") from TASO play-by-play, checked against the score.
+ * Torneopal sends the score after each basket in `description` as
+ * "<points> <home>-<away>", either as a running total for the whole game or
+ * restarting every period; both are accepted. Dropped as no-ops: repeated
+ * event_ids (e.g. "2 57-35" followed by "2 57-35 57-36" in game 970996),
+ * zero-point rows ("0 0-0" at a period start) and rows that do not move the
+ * score (duplicates after a period ends). Side comes from kotivieras/team
+ * or team_id vs team_A_id/team_B_id. Returns null when the rows do not
+ * add up: a basket whose points do not match the score change, or totals that
+ * differ from the final score (fs_A/fs_B). The clock (`time`) is not used.
  */
-export function threesFromEvents(events: unknown): Map<string, number> | null {
-  if (!Array.isArray(events)) return null
-  const out = new Map<string, number>()
-  let scoring = 0
+export function scoringEvents(m: Record<string, unknown>): ScoringEvent[] | null {
+  const events = m.events
+  const final = finalScore(m)
+  if (!Array.isArray(events) || !final) return null
+  const homeId = str(m.team_A_id)
+  const awayId = str(m.team_B_id)
+  const seen = new Set<string>()
+  const out: ScoringEvent[] = []
+  let game = { h: 0, a: 0 }
+  let period = { h: 0, a: 0 }
+  let currentPeriod = ''
+  let totals = { h: 0, a: 0 }
+  let lastRow = { h: -1, a: -1 }
   for (const e of events as Record<string, unknown>[]) {
-    if (str(e?.code) !== 'maali' || !str(e.player_id)) continue
-    scoring++
-    const pts = Number(str(e.description).split(/\s+/)[0])
-    if (pts === 3) out.set(str(e.player_id), (out.get(str(e.player_id)) || 0) + 1)
+    if (str(e?.code) !== 'maali') continue
+    const id = str(e.event_id)
+    if (id && seen.has(id)) continue
+    if (id) seen.add(id)
+    const m = /^(\d+)\s+(\d+)-(\d+)/.exec(str(e.description).trim())
+    if (!m) return null
+    const points = Number(m[1])
+    const h = Number(m[2])
+    const a = Number(m[3])
+    const p = str(e.period)
+    if (p !== currentPeriod) {
+      currentPeriod = p
+      period = { h: 0, a: 0 }
+    }
+    if (points === 0) continue
+    const sideRaw = str(e.kotivieras || e.team).toLowerCase()
+    const teamId = str(e.team_id)
+    const side =
+      sideRaw === 'koti' || sideRaw === 'a' || (!!homeId && teamId === homeId)
+        ? 'home'
+        : sideRaw === 'vieras' || sideRaw === 'b' || (!!awayId && teamId === awayId)
+          ? 'away'
+          : null
+    if (!side) return null
+    const fits = (prev: { h: number; a: number }) =>
+      side === 'home' ? h - prev.h === points && a === prev.a : a - prev.a === points && h === prev.h
+    if (fits(game)) game = { h, a }
+    else if (fits(period)) game = { h: game.h + (h - period.h), a: game.a + (a - period.a) }
+    else if (
+      (h === game.h && a === game.a) ||
+      (h === period.h && a === period.a) ||
+      (h === lastRow.h && a === lastRow.a)
+    )
+      continue // repeated row (e.g. after the period ended), score unchanged
+    else return null
+    period = { h, a }
+    lastRow = { h, a }
+    if (side === 'home') totals = { ...totals, h: totals.h + points }
+    else totals = { ...totals, a: totals.a + points }
+    out.push({ eventId: id, period: p, side, points, playerId: str(e.player_id) })
   }
-  return scoring > 0 ? out : null
+  if (totals.h !== final.home || totals.a !== final.away) return null
+  return out
+}
+
+/**
+ * Three-pointers per player from scoring events that add up to the final
+ * score (see scoringEvents). Null when the events are missing, do not add up,
+ * or carry no players: then 3P is unknown, not 0.
+ */
+export function threesFromEvents(m: Record<string, unknown>): Map<string, number> | null {
+  const rows = scoringEvents(m)
+  if (!rows || !rows.some((r) => r.playerId)) return null
+  const out = new Map<string, number>()
+  for (const r of rows) {
+    if (r.points === 3 && r.playerId) out.set(r.playerId, (out.get(r.playerId) || 0) + 1)
+  }
+  return out
+}
+
+/** fs_A/fs_B as numbers, or null when either side is blank. */
+export function finalScore(m: Record<string, unknown>): { home: number; away: number } | null {
+  const home = scoreValue(m.fs_A)
+  const away = scoreValue(m.fs_B)
+  return home === undefined || away === undefined ? null : { home, away }
 }
 
 export function extractMatchLineups(
@@ -320,7 +404,7 @@ export function extractMatchLineups(
   const statOpts: LineupStatOptions = opts ?? {
     stats: str(m.track_scorers) === '1' || m.track_scorers === undefined,
     assists: str(m.track_assists) === '1',
-    threes: threesFromEvents(m.events),
+    threes: threesFromEvents(m),
   }
   const homeName = str(m.team_A_name, 'Koti')
   const awayName = str(m.team_B_name, 'Vieras')
@@ -462,7 +546,7 @@ export function mapMatchDetail(m: Record<string, unknown>, fallbackId = '', now 
   const lineups = extractMatchLineups(m, {
     stats: statsTracked,
     assists: str(m.track_assists) === '1',
-    threes: threesFromEvents(m.events),
+    threes: threesFromEvents(m),
   })
   const leaders = state === 'played' || state === 'live' ? leadersFromRosters(lineups.home, lineups.away) : []
   const homeName = str(m.team_A_name, 'Koti')
@@ -950,7 +1034,7 @@ function teamLookupHit(t: Record<string, unknown> | undefined): LookupHit | null
 export const basketSearchDeps: SearchDeps = {
   clubs: fetchBasketClubs,
   club: fetchBasketClub,
-  roster: fetchBasketTeamRoster,
+  roster: cachedRoster(fetchBasketTeamRoster, createRosterCache()),
   competitions: fetchBasketCompetitions,
   categories: fetchBasketCategories,
   async match(id) {

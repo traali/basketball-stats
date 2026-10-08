@@ -67,7 +67,7 @@ export function GroupPage() {
           <BasketStandingsTable standings={standings} />
           {(
             [
-              ['Käynnissä', split.live],
+              ['Tänään', split.live],
               ['Tulevat', split.upcoming],
               ['Pelatut', split.played],
               ['Muut', split.other],

@@ -1,18 +1,69 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { TOOL_NAME_RE, hasModelContext, getWebMcpStatus, publishWebMcpStatus, subscribeWebMcpStatus } from '../src/webmcp.ts'
+import {
+  TOOL_NAME_RE,
+  hasModelContext,
+  getWebMcpStatus,
+  publishWebMcpStatus,
+  subscribeWebMcpStatus,
+  registerWithBrowser,
+  toToolResponse,
+  toErrorResponse,
+} from '../src/webmcp.ts'
 
 const src = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 
-describe('WebMCP uses document.modelContext.registerTool via use-webmcp-tool', () => {
-  it('tools are registered with Google\'s useWebMCP hook', () => {
-    const comp = src('src/components/WebMcpTools.tsx')
-    assert.match(comp, /from 'use-webmcp-tool'/)
-    assert.match(comp, /useWebMCP\(/)
-    assert.match(src('src/main.tsx'), /<WebMcpTools \/>/)
+const TOOL = { name: 'search_basketball', description: 'Search', inputSchema: { type: 'object', properties: {} }, execute: async () => 'ok' }
+
+describe('a tool counts as registered only if the browser accepted it', () => {
+  it('resolved registerTool -> registered, and execute results are normalised', async () => {
+    let registered
+    const mc = { registerTool: async (tool) => { registered = tool } }
+    const res = await registerWithBrowser(mc, TOOL, new AbortController().signal)
+    assert.deepEqual(res, { registered: true, error: null })
+    assert.deepEqual(await registered.execute({}), { content: [{ type: 'text', text: 'ok' }] })
   })
 
+  it('a rejected promise (e.g. NotAllowedError) is not registered', async () => {
+    const mc = { registerTool: () => Promise.reject(new DOMException('tools policy', 'NotAllowedError')) }
+    const res = await registerWithBrowser(mc, TOOL, new AbortController().signal)
+    assert.equal(res.registered, false)
+    assert.match(res.error.message, /tools policy/)
+  })
+
+  it('a synchronous throw is not registered', async () => {
+    const mc = { registerTool: () => { throw new TypeError('bad schema') } }
+    const res = await registerWithBrowser(mc, TOOL, new AbortController().signal)
+    assert.equal(res.registered, false)
+    assert.match(res.error.message, /bad schema/)
+  })
+
+  it('aborted before the browser answered: not registered', async () => {
+    const ctrl = new AbortController()
+    const mc = { registerTool: async () => { ctrl.abort() } }
+    const res = await registerWithBrowser(mc, TOOL, ctrl.signal)
+    assert.equal(res.registered, false)
+  })
+
+  it('a throwing tool returns an isError result, never a success', async () => {
+    let registered
+    const mc = { registerTool: async (tool) => { registered = tool } }
+    await registerWithBrowser(mc, { ...TOOL, execute: async () => { throw new Error('Basket.fi call failed') } }, new AbortController().signal)
+    assert.deepEqual(await registered.execute({}), { content: [{ type: 'text', text: 'Basket.fi call failed' }], isError: true })
+    assert.deepEqual(toToolResponse({ a: 1 }), { content: [{ type: 'text', text: '{"a":1}' }] })
+    assert.equal(toErrorResponse('x').isError, true)
+  })
+
+  it('the component awaits registration and is mounted in main.tsx', () => {
+    const comp = src('src/components/WebMcpTools.tsx')
+    assert.match(comp, /registerWithBrowser\(/)
+    assert.match(comp, /\.then\(\(res\)/)
+    assert.match(src('src/main.tsx'), /<WebMcpTools \/>/)
+  })
+})
+
+describe('WebMCP uses document.modelContext.registerTool', () => {
   it('detects only a browser-provided document.modelContext', () => {
     assert.equal(hasModelContext(undefined), false)
     assert.equal(hasModelContext({}), false)

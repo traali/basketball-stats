@@ -6,7 +6,8 @@ import { describe, it, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { searchBasketData, parseBasketQuery } from '../src/services/basketApi.ts'
-import { searchBasket, searchNumber, tokenMatches, currentTeams } from '../src/services/basketSearch.ts'
+import { searchBasket, searchNumber, tokenMatches, currentTeams, ROSTER_CONCURRENCY } from '../src/services/basketSearch.ts'
+import { createRosterCache, cachedRoster } from '../src/utils/rosterCache.ts'
 
 const fx = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))
 const CLUBS = fx('basket-get-clubs.json')
@@ -23,7 +24,13 @@ function tasoMock(input) {
   const p = url.searchParams
   if (method === 'getClubs') return CLUBS
   if (method === 'getClub') return p.get('club_id') === '1447' ? CLUB : { call: { status: 'error', error_message: 'Club not found' } }
-  if (method === 'getTeam') return p.get('team_id') === '5751397' ? TEAM : 'PHP dump'
+  if (method === 'getTeam') {
+    const id = p.get('team_id')
+    if (id === '5751397') return TEAM
+    // other teams of the club exist but have no registered players; unknown ids get TASO's PHP dump
+    if (CLUB.club.teams.some((t) => t.team_id === id)) return { call: { status: 'ok' }, team: { team_id: id, team_name: 'LePy', players: [] } }
+    return 'PHP dump'
+  }
   if (method === 'getMatch') return p.get('match_id') === MATCH.match.match_id ? MATCH : { call: { status: 'error', error_message: 'Match not found or published 3' } }
   if (method === 'getPlayer') return { call: { status: 'error', error_message: 'Player not found' } }
   if (method === 'getCompetitions') return { call: { status: 'ok' }, competitions: [] }
@@ -140,16 +147,58 @@ describe('outages are failures, not "no hits"', () => {
     assert.equal(res.failed, true)
   })
 
-  it('club found but every roster call failing is a failure, not "no player"', async () => {
-    const club = { clubId: '1', name: 'Testiseura', abbreviation: 'TS', cityName: 'Espoo' }
-    const res = await searchBasket({ kind: 'text', q: 'Testiseura Virtanen' }, {
-      ...deps,
-      clubs: async () => [club],
-      club: async () => ({ ...club, teams: [{ teamId: '9', teamName: 'TS', status: 'active', current: true, categoryName: 'Miehet', competitionName: 'X' }] }),
-    })
-    assert.equal(res.hint, undefined)
-    // the club hit is real, so the page shows it; no player is invented
+  const club = { clubId: '1', name: 'Testiseura', abbreviation: 'TS', cityName: 'Espoo' }
+  const team = (id) => ({ teamId: id, teamName: 'TS', status: 'active', current: true, categoryName: `Sarja ${id}`, competitionName: 'X' })
+  const clubDeps = (roster) => ({
+    ...deps,
+    clubs: async () => [club],
+    club: async () => ({ ...club, teams: ['1', '2', '3', '4'].map(team) }),
+    roster,
+  })
+
+  it('club found but every roster call failing says the search failed, never "no player"', async () => {
+    const res = await searchBasket({ kind: 'text', q: 'Testiseura Virtanen' }, clubDeps(down))
     assert.deepEqual(res.hits.map((h) => h.kind), ['club'])
+    assert.match(res.hint, /4\/4 kokoonpanon haku epäonnistui/)
+    assert.doesNotMatch(res.hint, /^Ei pelaajaa/)
+  })
+
+  it('some rosters failing: names the failed teams instead of claiming "not found"', async () => {
+    const roster = async (id) => {
+      if (id === '3') throw new Error('upstream 403')
+      return [{ playerId: `p${id}`, fullName: `Etu Muu${id}`, shirtNumber: '7', teamName: 'TS' }]
+    }
+    const res = await searchBasket({ kind: 'text', q: 'Testiseura Virtanen' }, clubDeps(roster))
+    assert.match(res.hint, /1\/4 kokoonpanon haku epäonnistui \(TS · Sarja 3\)/)
+    assert.match(res.hint, /haku jäi kesken/)
+  })
+
+  it('reports progress as rosters arrive and shows hits found so far', async () => {
+    const roster = async (id) => [{ playerId: `p${id}`, fullName: id === '2' ? 'Ville Virtanen' : 'Muu Pelaaja', shirtNumber: '', teamName: 'TS' }]
+    const seen = []
+    const res = await searchBasket({ kind: 'text', q: 'Testiseura Virtanen' }, clubDeps(roster), {
+      onProgress: (p) => seen.push([p.done, p.total, p.hits.filter((h) => h.kind === 'player').length]),
+    })
+    assert.deepEqual(seen[0], [0, 4, 0])
+    assert.deepEqual(seen.at(-1), [4, 4, 1])
+    assert.ok(seen.every(([d], i) => i === 0 || d >= seen[i - 1][0]))
+    assert.deepEqual(res.hits.filter((h) => h.kind === 'player').map((h) => h.title), ['Ville Virtanen'])
+    assert.equal(res.hint, undefined)
+  })
+
+  it('fetches rosters in parallel, at most ROSTER_CONCURRENCY at a time', async () => {
+    let active = 0
+    let peak = 0
+    const roster = async () => {
+      active++
+      peak = Math.max(peak, active)
+      await new Promise((r) => setTimeout(r, 5))
+      active--
+      return []
+    }
+    const many = { ...clubDeps(roster), club: async () => ({ ...club, teams: Array.from({ length: 20 }, (_, i) => team(String(i))) }) }
+    await searchBasket({ kind: 'text', q: 'Testiseura Virtanen' }, many)
+    assert.equal(peak, ROSTER_CONCURRENCY)
   })
 })
 
@@ -164,5 +213,34 @@ describe('matching helpers', () => {
     const t = (id, status, current) => ({ teamId: id, teamName: 'X', status, current, categoryName: '', competitionName: '' })
     assert.deepEqual(currentTeams({ teams: [t('1', 'active', true), t('2', 'active', false), t('3', 'archived', false)] }).map((x) => x.teamId), ['1'])
     assert.deepEqual(currentTeams({ teams: [t('2', 'active', false), t('3', 'archived', false)] }).map((x) => x.teamId), ['2'])
+  })
+})
+
+describe('roster cache (sessionStorage, short TTL)', () => {
+  const mem = () => {
+    const d = new Map()
+    return { getItem: (k) => (d.has(k) ? d.get(k) : null), setItem: (k, v) => d.set(k, String(v)), removeItem: (k) => d.delete(k), key: (i) => [...d.keys()][i] ?? null, get length() { return d.size } }
+  }
+  const P = [{ playerId: '1', fullName: 'A B', shirtNumber: '4', teamId: '9', teamName: 'T', points: null, assists: null, fouls: null, threePointers: null }]
+
+  it('reuses a fresh roster and refetches after the TTL', async () => {
+    let t = 0
+    let calls = 0
+    const cache = createRosterCache(mem(), 1000, () => t)
+    const get = cachedRoster(async () => { calls++; return P }, cache)
+    await get('9')
+    await get('9')
+    assert.equal(calls, 1)
+    t = 1001
+    await get('9')
+    assert.equal(calls, 2)
+  })
+
+  it('never caches a failure', async () => {
+    let calls = 0
+    const get = cachedRoster(async () => { calls++; throw new Error('403') }, createRosterCache(mem()))
+    await assert.rejects(get('9'))
+    await assert.rejects(get('9'))
+    assert.equal(calls, 2)
   })
 })

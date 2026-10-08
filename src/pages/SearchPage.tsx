@@ -18,6 +18,7 @@ export function SearchPage() {
   const [input, setInput] = useState(q)
   const [result, setResult] = useState<SearchOutcome>(EMPTY)
   const [loading, setLoading] = useState(false)
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [attempt, setAttempt] = useState(0)
 
   const favoriteTeams = useMemo(
@@ -34,7 +35,16 @@ export function SearchPage() {
     }
     let cancelled = false
     setLoading(true)
-    searchBasketData(q, { favoriteTeams })
+    setProgress(null)
+    setResult(EMPTY)
+    searchBasketData(q, {
+      favoriteTeams,
+      onProgress: ({ done, total, hits }) => {
+        if (cancelled) return
+        setProgress({ done, total })
+        setResult({ hits, failed: false })
+      },
+    })
       .then((res) => {
         if (!cancelled) setResult(res)
       })
@@ -42,7 +52,10 @@ export function SearchPage() {
         if (!cancelled) setResult({ hits: [], failed: true })
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+          setProgress(null)
+        }
       })
     return () => {
       cancelled = true
@@ -103,14 +116,19 @@ export function SearchPage() {
         ))}
       </div>
       {loading ? (
-        <p className="text-sm text-slate-400">Haetaan Basket.fi:stä… (pelaajahaku käy läpi seuran kokoonpanot)</p>
-      ) : result.failed ? (
+        <p className="text-sm text-slate-400" role="status" aria-live="polite">
+          {progress && progress.total > 0
+            ? `Haetaan joukkueita ${progress.done}/${progress.total}… (pelaajat löytyvät kokoonpanoista)`
+            : 'Haetaan Basket.fi:stä…'}
+        </p>
+      ) : null}
+      {loading && hits.length === 0 ? null : result.failed ? (
         <LoadError what="Hakutuloksia" onRetry={() => setAttempt((n) => n + 1)} />
       ) : !q ? (
         <p className="text-sm text-slate-500">Aloita hakemalla seuraa, joukkuetta, sarjaa tai pelaajaa.</p>
       ) : (
         <div className="space-y-5">
-          {hits.length === 0 ? <p className="text-sm text-slate-500">Ei osumia haulle «{q}».</p> : null}
+          {hits.length === 0 && !loading ? <p className="text-sm text-slate-500">Ei osumia haulle «{q}».</p> : null}
           {result.hint ? <p className="text-xs text-slate-400 rounded-xl border border-hairline px-3 py-2">{result.hint}</p> : null}
           <HitGroup icon={Users} title="Seurat" items={grouped.club} fav="club" onOpen={(id) => navigate(`/club/${id}`)} />
           <HitGroup icon={Shield} title="Joukkueet" items={grouped.team} fav="team" onOpen={(id) => navigate(`/team/${id}`)} />

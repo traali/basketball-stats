@@ -28,3 +28,15 @@ describe('Finnish game time (TASO times are already Helsinki local)', () => {
     assert.equal(classifyMatch({ status: 'Fixture', date: '2026-10-09', time: '10:00:00' }, late), 'upcoming')
   })
 })
+
+describe('no assumed game length', () => {
+  it('a game of today past kickoff without a result is "awaiting", never unreported, live or 0–0', () => {
+    const now = new Date('2026-10-08T16:30:00Z') // 19.30 Helsinki
+    const raw = { status: 'Fixture', date: '2026-10-08', time: '18:20:00', fs_A: '0', fs_B: '0' }
+    assert.equal(classifyMatch(raw, now), 'awaiting')
+    // still "awaiting" five hours later the same day: no guess of when it "should" have ended
+    assert.equal(classifyMatch(raw, new Date('2026-10-08T20:50:00Z')), 'awaiting')
+    // the next day it becomes "no result reported"
+    assert.equal(classifyMatch(raw, new Date('2026-10-09T05:00:00Z')), 'unreported')
+  })
+})

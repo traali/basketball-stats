@@ -23,6 +23,7 @@ A failed call shows "Haku epäonnistui", never "no games". `call.status: error` 
 |---|---|---|---|
 | Played | 2224 | numbers | **Lopputulos** + score |
 | Fixture, future | 7260 | `""` (list) / `"0"` (single call) | **Tuleva**, no score |
+| Fixture, today, start time passed | – | `""` / `"0"` | **Ei tulosta vielä** (listed under *Tänään*; no game length is assumed, so never "should be over") |
 | Fixture, past date | 30 | `""`, five have `"0","0"` | **Ei tulosta** (never upcoming, never 0–0) |
 | Planned | 39 | `""`, mostly no date | **Aika avoin** |
 | Reschedule | 9 | `""` | **Siirretty** |
@@ -36,6 +37,10 @@ Single-game call (`getMatch`) differs from the list call:
 - `p{n}_winner` = `"A"`/`"B"` is filled only here (list: `""`).
 
 Live = a Live/Break status **on today's Helsinki date**. Older ones are "Tulos vahvistamatta".
+The only clock used is the start time (`date` + `time`, Helsinki); quarter clock and game length are never estimated.
+
+## Player search
+TASO has no player search (`getPlayers` is an unknown method), so names are found in `getTeam` rosters: current teams of the matched club (max 120), 6 calls in parallel, progress "Haetaan joukkueita x/y". Successful rosters are cached in sessionStorage for 15 min (`basket.roster.v1:*`), failures never. If any roster failed or was skipped, the result names them and never says "Ei pelaajaa".
 
 ## Quarters
 
@@ -61,6 +66,7 @@ only in saved favourite teams. Numbers are looked up with getMatch/getTeam/getPl
 
 Honest calculations:
 - 3-pointers per player = count of `maali` events whose description starts with `3`
+  — only when the play-by-play adds up: duplicate `event_id`s (TASO repeats the last basket as e.g. `"2 57-35 57-36"`), `0`-point rows and rows that do not move the score are dropped; each basket must match the score change (running total for the game or restarting each period, both accepted) and the totals must equal `fs_A`/`fs_B`. Otherwise 3P is shown as unknown. Of 24 played games on 3–7 Oct 2026, 14 logs stopped short of the final score (e.g. 970996 ends 57–35, final 59–35). The event clock (`time` is `0:00` throughout) is never used.
   (verified: event points per player = lineup points, all 22 players).
 - Win/loss from Played scores or the walkover winner.
 

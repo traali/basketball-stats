@@ -9,6 +9,9 @@
  * - Walkovers: the list call says status "Forfeited", the single-game call
  *   says "Played" with walkover=1 and forfeit_A/forfeit_B = "match".
  * - "Live"/"Break" can be left behind on old games; only today counts as live.
+ * - No game length is assumed. A game of today whose kickoff has passed but
+ *   that TASO still calls "Fixture" is "awaiting" (no result yet), not
+ *   "unreported" and not live: it may be in progress or just finished.
  */
 import { helsinkiDateISO, isKickoffUpcoming } from './matchContext.ts'
 
@@ -18,6 +21,7 @@ export type MatchState =
   | 'live'
   | 'upcoming'
   | 'unscheduled'
+  | 'awaiting'
   | 'unreported'
   | 'unconfirmed'
   | 'postponed'
@@ -86,6 +90,7 @@ export function classifyMatch(m: RawMatchLike, now = new Date()): MatchState {
   }
   if (!date) return 'unscheduled'
   if (isKickoffUpcoming(date, time, now)) return 'upcoming'
+  if (date === helsinkiDateISO(now)) return 'awaiting'
   return 'unreported'
 }
 
@@ -107,6 +112,7 @@ export const STATE_LABEL: Record<MatchState, string> = {
   live: 'Live',
   upcoming: 'Tuleva',
   unscheduled: 'Aika avoin',
+  awaiting: 'Ei tulosta vielä',
   unreported: 'Ei tulosta',
   unconfirmed: 'Tulos vahvistamatta',
   postponed: 'Siirretty',
@@ -119,7 +125,8 @@ export const STATE_HINT: Record<MatchState, string> = {
   live: 'Ottelu on käynnissä.',
   upcoming: '',
   unscheduled: 'Basket.fi ei ole vielä julkaissut ottelun aikaa.',
-  unreported: 'Ottelun aika on mennyt, mutta Basket.fi:ssä ei ole tulosta.',
+  awaiting: 'Alkamisaika on ohi. Basket.fi ei ole vielä julkaissut tulosta eikä live-tilannetta.',
+  unreported: 'Ottelun päivä on mennyt, mutta Basket.fi:ssä ei ole tulosta.',
   unconfirmed: 'Ottelu jäi Basket.fi:ssä keskeneräiseksi. Lopputulosta ei ole vahvistettu.',
   postponed: 'Ottelu on merkitty siirrettäväksi. Uutta aikaa ei ole julkaistu.',
   cancelled: 'Ottelu on peruttu.',

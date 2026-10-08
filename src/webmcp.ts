@@ -2,8 +2,10 @@
  * WebMCP (https://webmachinelearning.github.io/webmcp).
  *
  * Tools are registered with `document.modelContext.registerTool(tool, { signal })`
- * through Google's `use-webmcp-tool` hook (see components/WebMcpTools.tsx).
- * Aborting the signal unregisters a tool. Chrome 146+ exposes the API behind
+ * (components/WebMcpTools.tsx). The hook there follows Google's
+ * `use-webmcp-tool` (Apache-2.0) but awaits registerTool: a tool counts as
+ * registered only after the browser's promise resolved. Aborting the signal
+ * unregisters a tool. Chrome 146+ exposes the API behind
  * chrome://flags/#enable-webmcp-testing.
  *
  * Rules kept here:
@@ -75,4 +77,69 @@ export function publishWebMcpStatus(next: WebMcpStatus) {
   if (same) return
   status = next
   listeners.forEach((l) => l())
+}
+
+export type ToolResponse = { content: Array<{ type: 'text'; text: string }>; isError?: boolean }
+
+/** Whatever a tool returns becomes an MCP tool result (same rules as use-webmcp-tool). */
+export function toToolResponse(value: unknown): ToolResponse {
+  if (value && typeof value === 'object' && Array.isArray((value as { content?: unknown }).content)) {
+    return value as ToolResponse
+  }
+  if (value === undefined || value === null) return { content: [] }
+  if (typeof value === 'string') return { content: [{ type: 'text', text: value }] }
+  return { content: [{ type: 'text', text: JSON.stringify(value) }] }
+}
+
+/** A thrown failure is an explicit error result, never a success. */
+export function toErrorResponse(error: unknown): ToolResponse {
+  const text =
+    error instanceof Error ? error.message : typeof error === 'string' ? error : (() => {
+      try {
+        return JSON.stringify(error)
+      } catch {
+        return String(error)
+      }
+    })()
+  return { content: [{ type: 'text', text }], isError: true }
+}
+
+type BrowserModelContext = {
+  registerTool: (tool: Record<string, unknown>, options: { signal: AbortSignal }) => unknown
+}
+
+export type RegistrationResult = { registered: boolean; error: Error | null }
+
+/**
+ * Register one tool and report the truth: `registered` is true only when
+ * registerTool returned (or its promise resolved) and the signal is still live.
+ * A synchronous throw or a rejected promise (e.g. NotAllowedError from the
+ * `tools` permissions policy) is `registered: false` with the error.
+ */
+export async function registerWithBrowser(
+  mc: BrowserModelContext,
+  tool: WebMcpTool,
+  signal: AbortSignal,
+): Promise<RegistrationResult> {
+  try {
+    await mc.registerTool(
+      {
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+        annotations: tool.annotations,
+        async execute(args: Record<string, unknown>) {
+          try {
+            return toToolResponse(await tool.execute(args || {}))
+          } catch (err) {
+            return toErrorResponse(err)
+          }
+        },
+      },
+      { signal },
+    )
+    return { registered: !signal.aborted, error: null }
+  } catch (err) {
+    return { registered: false, error: err instanceof Error ? err : new Error(String(err)) }
+  }
 }

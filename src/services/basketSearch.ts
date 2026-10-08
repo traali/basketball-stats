@@ -47,6 +47,8 @@ export interface SearchOptions {
   favoriteTeams?: Array<{ id: string; name: string }>
   /** Max rosters fetched for one player search. */
   maxRosters?: number
+  /** Called while rosters load: progress and the hits found so far. */
+  onProgress?: (p: { done: number; total: number; hits: DiscoveryHit[] }) => void
 }
 
 export interface SearchOutcome {
@@ -130,32 +132,78 @@ interface RosterSource {
   label: string
 }
 
+export interface RosterScan {
+  hits: DiscoveryHit[]
+  /** Every roster call failed. */
+  failed: boolean
+  /** Teams whose roster could not be fetched (labels). */
+  failedTeams: string[]
+  /** Teams not scanned because of the limit. */
+  skipped: number
+  total: number
+}
+
+/** Rosters fetched at the same time. Small on purpose: TASO is shared. */
+export const ROSTER_CONCURRENCY = 6
+
 async function scanRosters(
   sources: RosterSource[],
   nameTokens: string[],
   deps: SearchDeps,
   limit: number,
-): Promise<{ hits: DiscoveryHit[]; failed: boolean }> {
+  onProgress?: (done: number, total: number, hits: DiscoveryHit[]) => void,
+): Promise<RosterScan> {
   const picked = sources.slice(0, limit)
-  const results = await mapLimit(picked, 6, (s) => deps.roster(s.teamId))
-  const failed = picked.length > 0 && results.every((r) => r.status === 'rejected')
   const seen = new Set<string>()
   const hits: DiscoveryHit[] = []
-  results.forEach((r, i) => {
-    if (r.status !== 'fulfilled') return
-    for (const p of r.value) {
-      if (!p.playerId || seen.has(p.playerId)) continue
-      if (!allMatch(nameTokens, words(p.fullName))) continue
-      seen.add(p.playerId)
-      hits.push({
-        kind: 'player',
-        id: p.playerId,
-        title: p.fullName,
-        subtitle: [p.shirtNumber ? `#${p.shirtNumber}` : '', picked[i].label].filter(Boolean).join(' · '),
-      })
+  const failedTeams: string[] = []
+  let done = 0
+  onProgress?.(0, picked.length, [])
+  await mapLimit(picked, ROSTER_CONCURRENCY, async (source) => {
+    try {
+      const players = await deps.roster(source.teamId)
+      for (const p of players) {
+        if (!p.playerId || seen.has(p.playerId)) continue
+        if (!allMatch(nameTokens, words(p.fullName))) continue
+        seen.add(p.playerId)
+        hits.push({
+          kind: 'player',
+          id: p.playerId,
+          title: p.fullName,
+          subtitle: [p.shirtNumber ? `#${p.shirtNumber}` : '', source.label].filter(Boolean).join(' · '),
+        })
+      }
+    } catch {
+      failedTeams.push(source.label)
+    } finally {
+      done++
+      onProgress?.(done, picked.length, hits.slice(0, MAX_PLAYERS))
     }
   })
-  return { hits: hits.slice(0, MAX_PLAYERS), failed }
+  return {
+    hits: hits.slice(0, MAX_PLAYERS),
+    failed: picked.length > 0 && failedTeams.length === picked.length,
+    failedTeams,
+    skipped: sources.length - picked.length,
+    total: picked.length,
+  }
+}
+
+/** Honest note after a roster scan: never "not found" if some rosters were not checked. */
+export function rosterScanHint(scan: RosterScan, name: string, where: string): string | undefined {
+  const missing = scan.failedTeams.length + scan.skipped
+  if (missing === 0) {
+    return scan.hits.length ? undefined : `Ei pelaajaa «${name}» ${where} (${scan.total} kokoonpanoa katsottu).`
+  }
+  const parts: string[] = []
+  if (scan.failedTeams.length) {
+    const shown = scan.failedTeams.slice(0, 3).join(', ')
+    const more = scan.failedTeams.length > 3 ? ` ja ${scan.failedTeams.length - 3} muuta` : ''
+    parts.push(`${scan.failedTeams.length}/${scan.total + scan.skipped} kokoonpanon haku epäonnistui (${shown}${more})`)
+  }
+  if (scan.skipped) parts.push(`${scan.skipped} joukkuetta jäi katsomatta`)
+  const lead = scan.hits.length ? 'Tulokset voivat olla vajaat' : `Pelaajaa «${name}» ei löytynyt katsotuista kokoonpanoista, mutta haku jäi kesken`
+  return `${lead}: ${parts.join('; ')}. Kokeile uudelleen.`
 }
 
 async function lookupIds(id: string, kinds: Array<'match' | 'team' | 'player' | 'club'>, deps: SearchDeps): Promise<SearchOutcome> {
@@ -187,7 +235,7 @@ async function searchText(raw: string, deps: SearchDeps, opts: SearchOptions): P
   const q = normalizeSearch(raw)
   const tokens = q.split(' ').filter(Boolean)
   if (q.length < 2) return { hits: [], failed: false }
-  const maxRosters = opts.maxRosters ?? 60
+  const maxRosters = opts.maxRosters ?? 120
 
   let clubs: BasketClubSummary[]
   try {
@@ -255,24 +303,27 @@ async function searchText(raw: string, deps: SearchDeps, opts: SearchOptions): P
     hits.push(...dedupe(teamHits).slice(0, MAX_TEAMS))
 
     if (rosterSources.length) {
-      const scan = await scanRosters(rosterSources, restForPlayers, deps, maxRosters)
+      const base = dedupe(hits)
+      const scan = await scanRosters(rosterSources, restForPlayers, deps, maxRosters, (done, total, found) =>
+        opts.onProgress?.({ done, total, hits: [...base, ...found] }),
+      )
       hits.push(...scan.hits)
-      if (scan.failed) failed = true
-      else if (!scan.hits.length) {
-        hint = `Ei pelaajaa «${restForPlayers.join(' ')}» seurojen ${scannedClubs.join(', ')} tämän kauden kokoonpanoissa.`
-      }
+      hint = rosterScanHint(scan, restForPlayers.join(' '), `seurojen ${scannedClubs.join(', ')} tämän kauden kokoonpanoissa`)
     }
   } else {
     // No club in the query: favourite teams' rosters, then competitions and age groups.
     const favTeams = (opts.favoriteTeams || []).filter((t) => t.id)
+    let favHint: string | undefined
     if (looksLikeName(tokens) && favTeams.length) {
       const scan = await scanRosters(
         favTeams.map((t) => ({ teamId: t.id, label: t.name })),
         tokens,
         deps,
         maxRosters,
+        (done, total, found) => opts.onProgress?.({ done, total, hits: found }),
       )
       hits.push(...scan.hits)
+      favHint = scan.failedTeams.length ? rosterScanHint(scan, tokens.join(' '), 'suosikkijoukkueissa') : undefined
     }
 
     const comps = await deps.competitions().catch(() => [] as BasketCompetition[])
@@ -301,7 +352,9 @@ async function searchText(raw: string, deps: SearchDeps, opts: SearchOptions): P
     hits.push(...catHits.slice(0, MAX_CATEGORIES))
 
     if (!hits.some((h) => h.kind === 'player') && looksLikeName(tokens)) {
-      hint = `Basket.fi ei tarjoa pelaajien nimihakua${favTeams.length ? ' (suosikkijoukkueiden kokoonpanot katsottu)' : ''}. Kirjoita seura ja nimi, esim. «Pyrintö Virtanen».`
+      hint =
+        favHint ??
+        `Basket.fi ei tarjoa pelaajien nimihakua${favTeams.length ? ' (suosikkijoukkueiden kokoonpanot katsottu)' : ''}. Kirjoita seura ja nimi, esim. «Pyrintö Virtanen».`
     }
   }
 

@@ -141,7 +141,7 @@ export function PlayerPage() {
 
       {(
         [
-          ['Käynnissä', groups.live],
+          ['Tänään', groups.live],
           ['Joukkueen tulevat ottelut', groups.upcoming],
           ['Joukkueen pelatut ottelut', groups.played],
         ] as const
