@@ -7,7 +7,9 @@ Status: **component catalog 2026-09-26**. Every file under `src/components/`. Sc
 | `Layout.tsx` | `routes.tsx` | Page chrome, header, bottom nav, embed hides chrome | One shell for every route |
 | `Header.tsx` | Layout, team page | CourtMark, Basketball Stats, Koripalloliitto · Basket.fi, Hae, WebMCP badge | Source is visible. Hae jumps to `/search` |
 | `CourtMark.tsx` | Header, Home | Court glyph | Identity mark. Not a score |
-| `WebMcpBadge.tsx` | Header | Native host vs polyfill | Not a dataset. Do not overwrite `document.modelContext` |
+| `WebMcpBadge.tsx` | Header (hidden on phones) | WebMCP · N työkalua / WebMCP off | Not a dataset. Reads the status published by WebMcpTools |
+| `WebMcpTools.tsx` | `main.tsx` | Nothing (registers tools) | `document.modelContext.registerTool` via Google's `use-webmcp-tool`; no polyfill, no postMessage bridge |
+| `AppVersionBadge.tsx` | Layout footer | `v1.0.0 (git:<commit>)` | `data-testid="app-version-badge"` for the Hakemisto / golden checks |
 | `BottomNav.tsx` | Layout | Etusivu, Selaa, Haku, Suosikit | Selaa is `/browse`, not one competition |
 | `BasketStandingsTable.tsx` | Group, team, match | Sarjataulukko, O/V/H, Korit, Ero, Pisteet, Viimeiset V/H | Table as published by Basket.fi. No invented points rule |
 | `QuarterScoreCard.tsx` | Match | Score or state badge, Q1–Q4 (+JA), live team fouls | Blank periods stay blank |

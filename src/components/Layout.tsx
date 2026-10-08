@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Header } from './Header'
 import { BottomNav } from './BottomNav'
+import { AppVersionBadge } from './AppVersionBadge'
 import { parseBasketResourceFromLocation } from '../services/basketApi'
 
 export function Layout() {
@@ -55,6 +56,7 @@ export function Layout() {
         <main>
           <Outlet />
         </main>
+        {!isEmbed && <AppVersionBadge />}
       </div>
 
       {!isEmbed && <BottomNav />}

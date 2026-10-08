@@ -1,6 +1,8 @@
 /**
- * Basketball WebMCP tools for native Chrome and ChatGPT Desktop/Sites.
- * Registers on document.modelContext.registerTool — never overwrites the host getter.
+ * Basketball WebMCP tools. Registered on document.modelContext by
+ * components/WebMcpTools.tsx (Google's use-webmcp-tool hook). Every tool
+ * returns only what Basket.fi returned; a failed call is reported as a
+ * failure (thrown -> isError result), never as "no data".
  */
 
 import {
@@ -10,16 +12,11 @@ import {
   fetchBasketPlayer,
   pickCurrentGroup,
   mapGroupTeamsToStandings,
-  searchDiscovery,
+  searchBasketData,
 } from './services/basketApi'
 import { buildBasketballStatsContract } from './types/contracts'
 import { STATE_LABEL } from './utils/matchStatus'
-import {
-  connectModelContext,
-  detectWebMcpConsumer,
-  publishWebMcpStatus,
-  type ModelContextTool,
-} from './webmcp'
+import type { WebMcpTool } from './webmcp'
 
 function textResult(text: string, extra?: Record<string, unknown>) {
   return {
@@ -133,14 +130,14 @@ async function searchBasketballTool(args: Record<string, unknown>) {
   if (query.length < 2) {
     return textResult('query is required (club, team, player, competition, or a basket.fi URL).')
   }
-  const hits = await searchDiscovery(query)
-  const summary =
-    hits.length === 0
-      ? `No Basket.fi hits for «${query}».`
-      : hits
-          .slice(0, 12)
-          .map((h) => `${h.kind} ${h.title}${h.subtitle ? ` — ${h.subtitle}` : ''} (${h.id})`)
-          .join('\n')
+  const res = await searchBasketData(query)
+  if (res.failed) throw new Error(`Basket.fi search failed for «${query}». This is a fetch failure, not "no hits".`)
+  const hits = res.hits
+  const lines = hits
+    .slice(0, 12)
+    .map((h) => `${h.kind} ${h.title}${h.subtitle ? ` — ${h.subtitle}` : ''} (${h.id})`)
+  if (res.hint) lines.push(`Note: ${res.hint}`)
+  const summary = hits.length === 0 && !res.hint ? `No Basket.fi hits for «${query}».` : lines.join('\n')
   return {
     content: [{ type: 'text' as const, text: summary }],
     summary,
@@ -204,7 +201,7 @@ async function openBasketballResourceTool(args: Record<string, unknown>) {
   return { content: [{ type: 'text' as const, text: summary }], summary, path }
 }
 
-const TOOLS: ModelContextTool[] = [
+export const BASKETBALL_TOOLS: WebMcpTool[] = [
   {
     name: 'search_basketball',
     title: 'Search Basket.fi',
@@ -218,7 +215,7 @@ const TOOLS: ModelContextTool[] = [
       required: ['query'],
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true },
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: searchBasketballTool,
   },
   {
@@ -234,7 +231,7 @@ const TOOLS: ModelContextTool[] = [
       required: ['matchId'],
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true },
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: getBasketballGameCardTool,
   },
   {
@@ -252,7 +249,7 @@ const TOOLS: ModelContextTool[] = [
       },
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true },
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: getBasketballStandingsTool,
   },
   {
@@ -267,7 +264,7 @@ const TOOLS: ModelContextTool[] = [
       required: ['teamId'],
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true },
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: getBasketballTeamTool,
   },
   {
@@ -282,7 +279,7 @@ const TOOLS: ModelContextTool[] = [
       required: ['playerId'],
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true },
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: getBasketballPlayerTool,
   },
   {
@@ -299,37 +296,7 @@ const TOOLS: ModelContextTool[] = [
       required: ['kind'],
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: false, consequentialHint: true },
+    annotations: { readOnlyHint: false },
     execute: openBasketballResourceTool,
   },
 ]
-
-let session: AbortController | null = null
-
-export async function registerBasketballWebMCP() {
-  if (typeof window === 'undefined') return undefined
-  session?.abort()
-  session = new AbortController()
-  const { mode, mc } = connectModelContext()
-  const consumer = detectWebMcpConsumer()
-  const registered: string[] = []
-  let error: string | undefined
-
-  for (const tool of TOOLS) {
-    try {
-      await mc.registerTool(tool, { signal: session.signal })
-      registered.push(tool.name)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      if (/already registered/i.test(message) || /InvalidStateError/i.test(message)) {
-        registered.push(tool.name)
-      } else {
-        error = `${tool.name}: ${message}`
-        console.warn('[WebMCP] registerTool failed', tool.name, message)
-      }
-    }
-  }
-
-  publishWebMcpStatus({ mode, consumer, tools: registered, error })
-  return { mode, mc, tools: registered }
-}

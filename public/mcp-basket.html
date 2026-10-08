@@ -34,48 +34,69 @@
     <p class="empty" id="empty">Odotetaan otteludataa (matchId).</p>
   </div>
   <script>
+    // Renders a game card from data the embedding host passes in (mcp:init).
+    // Text only (no innerHTML), score only for played/live games, blank quarters stay blank.
     const params = new URLSearchParams(location.search || location.hash.replace(/^#/, ''))
     const matchId = params.get('matchId') || ''
+    const LABEL = { played: 'Lopputulos', live: 'Live', upcoming: 'Tuleva', forfeit: 'Luovutus', unscheduled: 'Aika avoin',
+      unreported: 'Ei tulosta', unconfirmed: 'Tulos vahvistamatta', postponed: 'Siirretty', cancelled: 'Peruttu' }
+
+    function el(tag, cls, text) {
+      const n = document.createElement(tag)
+      if (cls) n.className = cls
+      if (typeof text === 'string' || typeof text === 'number') n.textContent = String(text)
+      return n
+    }
+    const isNum = (v) => typeof v === 'number' && Number.isFinite(v)
 
     function render(data) {
-      const empty = document.getElementById('empty')
-      if (empty) empty.remove()
-      const home = data.homeTeamName || data.home || 'Koti'
-      const away = data.awayTeamName || data.away || 'Vieras'
-      const upcoming = data.phase === 'upcoming' || data.upcoming
-      const score = upcoming
-        ? 'vs'
-        : `${data.scoreHome ?? data.homeScore ?? '–'} – ${data.scoreAway ?? data.awayScore ?? '–'}`
-      const qs = data.quarters || []
-      const leader = data.leaders?.[0]
-      document.getElementById('card').innerHTML = `
-        <div class="header">
-          <span>Basket.fi${matchId ? ' · ' + matchId : ''}</span>
-          <span class="badge">${upcoming ? 'Tuleva' : data.phase === 'live' ? 'Live' : 'Lopputulos'}</span>
-        </div>
-        <div class="score-row">
-          <div class="team">${home}</div>
-          <div class="score">${score}</div>
-          <div class="team">${away}</div>
-        </div>
-        ${qs.length ? `<div class="quarters">${[0,1,2,3].map((i) => {
-          const q = qs[i] || {}
-          return `<div><div class="q-label">Q${i+1}</div><div class="q-val">${q.scoreHome ?? '–'}–${q.scoreAway ?? '–'}</div></div>`
-        }).join('')}</div>` : ''}
-        <div class="meta">
-          <span>${leader ? 'Pistehai: ' + leader.playerName + ' (' + leader.points + 'p)' : ''}</span>
-          <span>${data.teamFoulsHome != null ? 'Virheet ' + data.teamFoulsHome + '–' + data.teamFoulsAway : ''}</span>
-        </div>`
+      const phase = String(data.phase || data.state || '')
+      const home = String(data.homeTeamName || data.home || 'Koti')
+      const away = String(data.awayTeamName || data.away || 'Vieras')
+      const sh = data.scoreHome, sa = data.scoreAway
+      const showScore = (phase === 'played' || phase === 'live') && isNum(sh) && isNum(sa)
+      const card = document.getElementById('card')
+      card.replaceChildren()
+
+      const header = el('div', 'header')
+      header.append(el('span', '', 'Basket.fi' + (matchId ? ' · ' + matchId : '')))
+      if (LABEL[phase]) header.append(el('span', 'badge', LABEL[phase]))
+      card.append(header)
+
+      const row = el('div', 'score-row')
+      row.append(el('div', 'team', home), el('div', 'score', showScore ? sh + ' – ' + sa : 'vs'), el('div', 'team', away))
+      card.append(row)
+
+      const qs = Array.isArray(data.quarters) ? data.quarters : []
+      if (showScore && qs.length) {
+        const grid = el('div', 'quarters')
+        for (let i = 1; i <= 4; i++) {
+          const q = qs.find((x) => x && x.quarter === i) || {}
+          const h = q.scoreHome, a = q.scoreAway
+          const cell = el('div')
+          cell.append(el('div', 'q-label', 'Q' + i), el('div', 'q-val', isNum(h) && isNum(a) ? h + '–' + a : ''))
+          grid.append(cell)
+        }
+        card.append(grid)
+      }
+
+      const leader = Array.isArray(data.leaders) && data.leaders[0]
+      if (leader && isNum(leader.points)) {
+        const meta = el('div', 'meta')
+        meta.append(el('span', '', 'Eniten pisteitä: ' + String(leader.playerName || '') + ' (' + leader.points + ' p)'))
+        card.append(meta)
+      }
     }
 
     window.addEventListener('message', (event) => {
-      if (event.origin !== location.origin && event.source !== window.parent) return
+      if (event.source !== window.parent || window.parent === window) return
       const d = event.data
-      if (d?.type === 'mcp:init') {
-        window.parent.postMessage({ type: 'mcp:ready', protocolVersion: '2026-01' }, event.origin || '*')
-        const payload = d.payload || d.result || d.match
-        if (payload) render(payload)
+      if (!d || d.type !== 'mcp:init') return
+      if (/^https?:\/\//.test(event.origin)) {
+        window.parent.postMessage({ type: 'mcp:ready', protocolVersion: '2026-01' }, event.origin)
       }
+      const payload = d.payload || d.result || d.match
+      if (payload && typeof payload === 'object') render(payload)
     })
   </script>
 </body>

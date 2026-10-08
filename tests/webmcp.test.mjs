@@ -1,99 +1,79 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { WebMcpPolyfill, isNativeModelContext, getNativeModelContext, connectModelContext } from '../src/webmcp.ts'
+import { readFileSync } from 'node:fs'
+import { TOOL_NAME_RE, hasModelContext, getWebMcpStatus, publishWebMcpStatus, subscribeWebMcpStatus } from '../src/webmcp.ts'
 
-describe('WebMCP polyfill (spec-shaped)', () => {
-  it('registers tools, lists them async, and executeTool takes a RegisteredTool', async () => {
-    const mc = new WebMcpPolyfill()
-    await mc.registerTool({
-      name: 'get_basketball_game_card',
-      description: 'Match card',
-      inputSchema: { type: 'object', properties: { matchId: { type: 'string' } }, required: ['matchId'] },
-      execute: async (input) => ({ ok: true, matchId: input.matchId }),
-    })
-    const tools = await mc.getTools()
-    assert.equal(tools.length, 1)
-    assert.equal(tools[0].name, 'get_basketball_game_card')
-    assert.equal(typeof tools[0].execute, 'undefined')
+const src = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
 
-    const raw = await mc.executeTool(tools[0], { matchId: '42' })
-    const parsed = JSON.parse(raw)
-    assert.deepEqual(parsed, { ok: true, matchId: '42' })
+describe('WebMCP uses document.modelContext.registerTool via use-webmcp-tool', () => {
+  it('tools are registered with Google\'s useWebMCP hook', () => {
+    const comp = src('src/components/WebMcpTools.tsx')
+    assert.match(comp, /from 'use-webmcp-tool'/)
+    assert.match(comp, /useWebMCP\(/)
+    assert.match(src('src/main.tsx'), /<WebMcpTools \/>/)
   })
 
-  it('rejects duplicate names and empty name/description', async () => {
-    const mc = new WebMcpPolyfill()
-    const tool = {
-      name: 'get_basketball_standings',
-      description: 'Standings',
-      execute: async () => ({ teams: [] }),
+  it('detects only a browser-provided document.modelContext', () => {
+    assert.equal(hasModelContext(undefined), false)
+    assert.equal(hasModelContext({}), false)
+    assert.equal(hasModelContext({ modelContext: {} }), false)
+    assert.equal(hasModelContext({ modelContext: { registerTool() {} } }), true)
+  })
+
+  it('never defines, aliases or polyfills modelContext', () => {
+    for (const file of ['src/webmcp.ts', 'src/mcp-app.ts', 'src/components/WebMcpTools.tsx', 'src/main.tsx']) {
+      const code = src(file)
+      assert.doesNotMatch(code, /defineProperty\([^)]*modelContext/, file)
+      assert.doesNotMatch(code, /navigator\.modelContext\s*=|document\.modelContext\s*=/, file)
+      assert.doesNotMatch(code, /navigator\.modelContext/, file)
     }
-    await mc.registerTool(tool)
-    await assert.rejects(() => mc.registerTool(tool), /already registered/)
-    await assert.rejects(
-      () => mc.registerTool({ name: '', description: 'x', execute: async () => 1 }),
-      /required/,
-    )
   })
 
-  it('unregisters when AbortSignal aborts', async () => {
-    const mc = new WebMcpPolyfill()
-    const ctrl = new AbortController()
-    await mc.registerTool(
-      { name: 'temp_tool', description: 'temp', execute: async () => 1 },
-      { signal: ctrl.signal },
-    )
-    assert.equal((await mc.getTools()).length, 1)
-    ctrl.abort()
-    assert.equal((await mc.getTools()).length, 0)
-  })
-
-  it('treats registerTool-only host objects as native (Chrome / ChatGPT)', () => {
-    const fake = { registerTool() {} }
-    assert.equal(isNativeModelContext(fake), true)
-    assert.equal(isNativeModelContext({ getTools() {} }), false)
-  })
-
-  it('callTool wraps unknown tools as text errors instead of dummy data', async () => {
-    const mc = new WebMcpPolyfill()
-    const res = await mc.callTool({ name: 'missing', arguments: {} })
-    assert.match(res.content[0].text, /not found/i)
+  it('has no postMessage bridge that lets other pages list or call tools', () => {
+    for (const file of ['src/webmcp.ts', 'src/mcp-app.ts', 'src/components/WebMcpTools.tsx', 'src/main.tsx', 'public/mcp-basket.html']) {
+      const code = src(file)
+      assert.doesNotMatch(code, /webmcp:request|tools\/call|callTool|executeTool/, file)
+    }
+    assert.doesNotMatch(src('src/webmcp.ts'), /addEventListener\(\s*['"]message/)
   })
 })
 
-describe('native Chrome/ChatGPT consumer', () => {
-  it('does not treat a missing document as native', () => {
-    assert.equal(getNativeModelContext(), null)
+describe('tool definitions', () => {
+  const code = src('src/mcp-app.ts')
+  const names = [...code.matchAll(/^\s{4}name: '([^']+)'/gm)].map((m) => m[1])
+
+  it('every tool has a valid unique name, a description and an object schema', () => {
+    assert.ok(names.length >= 6, `found ${names.length} tools`)
+    assert.equal(new Set(names).size, names.length)
+    for (const n of names) assert.match(n, TOOL_NAME_RE)
+    assert.equal((code.match(/inputSchema: \{\s*type: 'object'/g) || []).length, names.length)
   })
 
-  it('never overwrites an existing registerTool host object', () => {
-    const calls = []
-    const host = {
-      registerTool: async (tool) => {
-        calls.push(tool.name)
-      },
-    }
-    globalThis.document = { modelContext: host }
-    try {
-      const { mode, mc } = connectModelContext()
-      assert.equal(mode, 'native')
-      assert.equal(mc, host)
-      assert.equal(globalThis.document.modelContext, host)
-    } finally {
-      delete globalThis.document
-    }
+  it('only spec annotations are used (readOnlyHint, untrustedContentHint)', () => {
+    assert.doesNotMatch(code, /consequentialHint/)
+    assert.match(code, /untrustedContentHint: true/)
   })
+})
 
-  it('second connect keeps polyfill mode and does not report native', () => {
-    globalThis.document = {}
-    try {
-      const first = connectModelContext()
-      assert.equal(first.mode, 'polyfill')
-      const second = connectModelContext()
-      assert.equal(second.mode, 'polyfill')
-      assert.equal(second.mc, first.mc)
-    } finally {
-      delete globalThis.document
-    }
+describe('status store for the header badge', () => {
+  it('publishes changes once and ignores identical updates', () => {
+    let calls = 0
+    const off = subscribeWebMcpStatus(() => calls++)
+    publishWebMcpStatus({ supported: true, tools: ['a', 'b'] })
+    publishWebMcpStatus({ supported: true, tools: ['a', 'b'] })
+    off()
+    assert.equal(calls, 1)
+    assert.deepEqual(getWebMcpStatus().tools, ['a', 'b'])
+  })
+})
+
+describe('build info badge (Hakemisto / golden checks)', () => {
+  it('Layout exposes window.__APP_BUILD_INFO__ and renders the app-version-badge', () => {
+    const layout = src('src/components/Layout.tsx')
+    assert.match(layout, /window\.__APP_BUILD_INFO__ = \{/)
+    assert.match(layout, /<AppVersionBadge \/>/)
+    const badge = src('src/components/AppVersionBadge.tsx')
+    assert.match(badge, /data-testid="app-version-badge"/)
+    assert.match(badge, /v\{version\} \(git:\{commit\}\)/)
   })
 })
