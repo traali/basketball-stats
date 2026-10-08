@@ -13,6 +13,8 @@ import {
   mapTeamRoster,
   pickCurrentGroup,
   threesFromEvents,
+  scoringEvents,
+  finalScore,
 } from '../src/services/basketApi.ts'
 import { classifyMatch, periodScores } from '../src/utils/matchStatus.ts'
 import { splitFixtures, teamSeasons } from '../src/utils/fixtureGroups.ts'
@@ -158,7 +160,7 @@ describe('player stats only where TASO records them', () => {
     const top = d.leaders[0]
     assert.equal(top.points, 30)
     assert.equal(top.threePointers, 2)
-    const threes = threesFromEvents(SINGLE.playedOvertime.events)
+    const threes = threesFromEvents(SINGLE.playedOvertime)
     assert.equal([...threes.values()].reduce((a, b) => a + b, 0), 14)
     // assists are not tracked (track_assists=0) → null, never 0
     assert.ok(d.homeRoster.every((p) => p.assists === null))
@@ -167,7 +169,7 @@ describe('player stats only where TASO records them', () => {
   })
 
   it('no events → 3P unknown (null), not 0', () => {
-    assert.equal(threesFromEvents([]), null)
+    assert.equal(threesFromEvents({ fs_A: '0', fs_B: '0', events: [] }), null)
   })
 
   it('season roster from getTeam has no stats at all (TASO leaves them blank)', () => {
@@ -235,5 +237,69 @@ describe('fetchBasketMatch', () => {
     } finally {
       fetchMock.mock.restore()
     }
+  })
+})
+
+describe('play-by-play: both Torneopal score formats, checked against the final score', () => {
+  const OT = SINGLE.playedOvertime // game 1009819, 89–85 after overtime
+  const sumBy = (rows, side) => rows.filter((r) => r.side === side).reduce((a, r) => a + r.points, 0)
+  const quarterSum = (m, side) => periodScores(m).reduce((a, q) => a + ((side === 'home' ? q.scoreHome : q.scoreAway) ?? 0), 0)
+
+  it('running-total format (real 1009819): baskets add up to the final score and to the quarter totals', () => {
+    const rows = scoringEvents(OT)
+    assert.ok(rows)
+    assert.equal(sumBy(rows, 'home'), 89)
+    assert.equal(sumBy(rows, 'away'), 85)
+    assert.equal(quarterSum(OT, 'home'), 89)
+    assert.equal(quarterSum(OT, 'away'), 85)
+  })
+
+  // Same real game rewritten into the other format: score restarts every period,
+  // a "0 0-0" row opens each period and the last basket of a period is repeated.
+  const perPeriod = (() => {
+    const out = []
+    let p = null
+    let base = { h: 0, a: 0 }
+    let last = null
+    for (const e of OT.events) {
+      if (e.code !== 'maali') { out.push(e); continue }
+      const [pts, score] = String(e.description).split(' ')
+      const [h, a] = score.split('-').map(Number)
+      if (e.period !== p) {
+        if (last) out.push({ ...last, event_id: `${last.event_id}-dup`, period: e.period })
+        base = last ? { h: Number(last.description.split(' ')[1].split('-')[0]) + base.h, a: Number(last.description.split(' ')[1].split('-')[1]) + base.a } : base
+        out.push({ ...e, event_id: `${e.event_id}-start`, description: '0 0-0', player_id: '' })
+        p = e.period
+      }
+      const row = { ...e, description: `${pts} ${h - base.h}-${a - base.a}` }
+      out.push(row)
+      last = row
+    }
+    return out
+  })()
+
+  it('per-period format with 0-0 and duplicate rows gives the same baskets and the same 3P', () => {
+    const a = scoringEvents(OT)
+    const b = scoringEvents({ ...OT, events: perPeriod })
+    assert.ok(b, 'per-period format accepted')
+    assert.deepEqual(b.map((r) => [r.side, r.points, r.playerId]), a.map((r) => [r.side, r.points, r.playerId]))
+    assert.deepEqual([...threesFromEvents({ ...OT, events: perPeriod })], [...threesFromEvents(OT)])
+  })
+
+  it('events that do not add up to the final score give no 3P (real 970996: duplicate event_id, last basket missing)', () => {
+    const g = load('basket-events-970996.json').match
+    assert.equal(finalScore(g).home, 59)
+    assert.equal(quarterSum(g, 'home'), 59) // quarters agree with the final score…
+    assert.equal(scoringEvents(g), null) // …the play-by-play stops at 57–35
+    assert.equal(threesFromEvents(g), null)
+  })
+
+  it('a basket whose points do not match the score change makes the whole log untrusted', () => {
+    const bad = OT.events.map((e, i) => (i === OT.events.findIndex((x) => x.code === 'maali') ? { ...e, description: '3 0-2' } : e))
+    assert.equal(scoringEvents({ ...OT, events: bad }), null)
+  })
+
+  it('no final score (game not played) → no play-by-play figures', () => {
+    assert.equal(scoringEvents({ ...OT, fs_A: '', fs_B: '' }), null)
   })
 })

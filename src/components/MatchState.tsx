@@ -8,6 +8,7 @@ const TONE: Record<MatchState, string> = {
   live: 'text-rose-300 border-rose-800 bg-rose-950/40',
   upcoming: 'text-slate-300 border-hairline',
   unscheduled: 'text-slate-400 border-hairline',
+  awaiting: 'text-slate-300 border-hairline',
   unreported: 'text-slate-400 border-hairline',
   unconfirmed: 'text-amber-300 border-amber-700/50',
   postponed: 'text-amber-300 border-amber-700/50',

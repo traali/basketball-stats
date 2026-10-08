@@ -1,0 +1,909 @@
+{
+ "_source": "koripallo-api.torneopal.net getMatch?match_id=970996 (Honka–LePy, 2026-10-08 fetch); events trimmed to scoring-relevant fields, no names",
+ "match": {
+  "match_id": "970996",
+  "status": "Played",
+  "fs_A": "59",
+  "fs_B": "35",
+  "p1s_A": "10",
+  "p1s_B": "2",
+  "p2s_A": "19",
+  "p2s_B": "12",
+  "p3s_A": "20",
+  "p3s_B": "13",
+  "p4s_A": "10",
+  "p4s_B": "8",
+  "events": [
+   {
+    "event_id": "10131304",
+    "code": "tuomarisaapui",
+    "period": "0",
+    "time": "0:00",
+    "description": "tuomari",
+    "kotivieras": "",
+    "team": "",
+    "player_id": ""
+   },
+   {
+    "event_id": "10131305",
+    "code": "tuomarisaapui",
+    "period": "0",
+    "time": "0:00",
+    "description": "avustava1",
+    "kotivieras": "",
+    "team": "",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127161",
+    "code": "vaihdajakso",
+    "period": "1",
+    "time": "0:00",
+    "description": "",
+    "kotivieras": "",
+    "team": "",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127280",
+    "code": "maali",
+    "period": "1",
+    "time": "0:00",
+    "description": "2 2-0",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127373",
+    "code": "maali",
+    "period": "1",
+    "time": "0:00",
+    "description": "2 4-0",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127412",
+    "code": "virhe",
+    "period": "1",
+    "time": "0:00",
+    "description": 1,
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127485",
+    "code": "virhe",
+    "period": "1",
+    "time": "0:00",
+    "description": 1,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127499",
+    "code": "maali",
+    "period": "1",
+    "time": "0:00",
+    "description": "1 5-0",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127511",
+    "code": "maali",
+    "period": "1",
+    "time": "0:00",
+    "description": "1 6-0",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127545",
+    "code": "virhe",
+    "period": "1",
+    "time": "0:00",
+    "description": 2,
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127666",
+    "code": "virhe",
+    "period": "1",
+    "time": "0:00",
+    "description": 2,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127733",
+    "code": "maali",
+    "period": "1",
+    "time": "0:00",
+    "description": "2 6-2",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127795",
+    "code": "virhe",
+    "period": "1",
+    "time": "0:00",
+    "description": 3,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127827",
+    "code": "virhe",
+    "period": "1",
+    "time": "0:00",
+    "description": 4,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127860",
+    "code": "maali",
+    "period": "1",
+    "time": "0:00",
+    "description": "1 7-2",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127870",
+    "code": "virhe",
+    "period": "1",
+    "time": "0:00",
+    "description": 3,
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127906",
+    "code": "maali",
+    "period": "1",
+    "time": "0:00",
+    "description": "2 9-2",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10127926",
+    "code": "virhe",
+    "period": "1",
+    "time": "0:00",
+    "description": 4,
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128055",
+    "code": "virhe",
+    "period": "1",
+    "time": "0:00",
+    "description": 5,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128104",
+    "code": "maali",
+    "period": "1",
+    "time": "0:00",
+    "description": "1 10-2",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128130",
+    "code": "vaihdajakso",
+    "period": "2",
+    "time": "10:00",
+    "description": "",
+    "kotivieras": "",
+    "team": "",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128339",
+    "code": "virhe",
+    "period": "2",
+    "time": "10:00",
+    "description": 1,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128386",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "2 12-2",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128410",
+    "code": "virhe",
+    "period": "2",
+    "time": "10:00",
+    "description": 2,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128471",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "2 14-2",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128477",
+    "code": "aikalisa",
+    "period": "2",
+    "time": "13:00",
+    "description": "Aikalisä",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128574",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "2 16-2",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128611",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "3 19-2",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128689",
+    "code": "virhe",
+    "period": "2",
+    "time": "10:00",
+    "description": 1,
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128697",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "2 19-4",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128739",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "2 19-6",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128821",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "2 19-8",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128939",
+    "code": "virhe",
+    "period": "2",
+    "time": "10:00",
+    "description": 3,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128951",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "2 21-8",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10128985",
+    "code": "virhe",
+    "period": "2",
+    "time": "10:00",
+    "description": 4,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129025",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "2 21-10",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129050",
+    "code": "virhe",
+    "period": "2",
+    "time": "10:00",
+    "description": 5,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129069",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "1 22-10",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129079",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "1 23-10",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129107",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "2 25-10",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129166",
+    "code": "virhe",
+    "period": "2",
+    "time": "10:00",
+    "description": 6,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129173",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "1 26-10",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129182",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "1 27-10",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129192",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "2 29-10",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129207",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "2 29-12",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129263",
+    "code": "maali",
+    "period": "2",
+    "time": "10:00",
+    "description": "2 29-14",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129298",
+    "code": "vaihdajakso",
+    "period": "3",
+    "time": "20:00",
+    "description": "",
+    "kotivieras": "",
+    "team": "",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129609",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 29-16",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129647",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 29-18",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129668",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 31-18",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129702",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 31-20",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129718",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 31-22",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129740",
+    "code": "virhe",
+    "period": "3",
+    "time": "20:00",
+    "description": 1,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129764",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "1 32-22",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129770",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "1 33-22",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129924",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 33-24",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129958",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 35-24",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10129975",
+    "code": "virhe",
+    "period": "3",
+    "time": "20:00",
+    "description": 1,
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130008",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 37-24",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130035",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "3 37-27",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130141",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 39-27",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130160",
+    "code": "virhe",
+    "period": "3",
+    "time": "20:00",
+    "description": 2,
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130185",
+    "code": "virhe",
+    "period": "3",
+    "time": "20:00",
+    "description": 3,
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130261",
+    "code": "virhe",
+    "period": "3",
+    "time": "20:00",
+    "description": 2,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130275",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 41-27",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130301",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 43-27",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130340",
+    "code": "virhe",
+    "period": "3",
+    "time": "20:00",
+    "description": 3,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130390",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 45-27",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130429",
+    "code": "virhe",
+    "period": "3",
+    "time": "20:00",
+    "description": 4,
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130459",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 47-27",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130480",
+    "code": "maali",
+    "period": "3",
+    "time": "20:00",
+    "description": "2 49-27",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130531",
+    "code": "vaihdajakso",
+    "period": "4",
+    "time": "30:00",
+    "description": "",
+    "kotivieras": "",
+    "team": "",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130667",
+    "code": "maali",
+    "period": "4",
+    "time": "30:00",
+    "description": "2 51-27",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130763",
+    "code": "maali",
+    "period": "4",
+    "time": "30:00",
+    "description": "2 51-29",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130795",
+    "code": "virhe",
+    "period": "4",
+    "time": "30:00",
+    "description": 1,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130828",
+    "code": "maali",
+    "period": "4",
+    "time": "30:00",
+    "description": "2 53-29",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130865",
+    "code": "virhe",
+    "period": "4",
+    "time": "30:00",
+    "description": 2,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130895",
+    "code": "virhe",
+    "period": "4",
+    "time": "30:00",
+    "description": 1,
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130967",
+    "code": "maali",
+    "period": "4",
+    "time": "30:00",
+    "description": "2 53-31",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10130975",
+    "code": "maali",
+    "period": "4",
+    "time": "30:00",
+    "description": "2 55-31",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10131024",
+    "code": "maali",
+    "period": "4",
+    "time": "30:00",
+    "description": "2 55-33",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10131040",
+    "code": "kelloseis",
+    "period": "4",
+    "time": "30:00",
+    "description": "",
+    "kotivieras": "",
+    "team": "",
+    "player_id": ""
+   },
+   {
+    "event_id": "10131044",
+    "code": "virhe",
+    "period": "4",
+    "time": "30:00",
+    "description": 3,
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10131063",
+    "code": "maali",
+    "period": "4",
+    "time": "30:00",
+    "description": "1 56-33",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10131078",
+    "code": "maali",
+    "period": "4",
+    "time": "30:00",
+    "description": "1 57-33",
+    "kotivieras": "koti",
+    "team": "A",
+    "player_id": ""
+   },
+   {
+    "event_id": "10131087",
+    "code": "maali",
+    "period": "4",
+    "time": "30:00",
+    "description": "2 57-35",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "10131087",
+    "code": "maali",
+    "period": "4",
+    "time": "30:00",
+    "description": "2 57-35 57-36",
+    "kotivieras": "vieras",
+    "team": "B",
+    "player_id": ""
+   },
+   {
+    "event_id": "99999999",
+    "code": "otteluloppui",
+    "period": 9,
+    "time": "",
+    "description": "",
+    "kotivieras": "",
+    "team": "",
+    "player_id": ""
+   },
+   {
+    "event_id": "0",
+    "code": "ottelualkoi",
+    "period": 0,
+    "time": "",
+    "description": "",
+    "kotivieras": "",
+    "team": "",
+    "player_id": ""
+   }
+  ]
+ }
+}

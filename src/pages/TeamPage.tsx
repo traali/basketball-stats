@@ -190,7 +190,7 @@ export function TeamPage() {
         <div className="space-y-5">
           {(
             [
-              ['Käynnissä', groups.live],
+              ['Tänään', groups.live],
               ['Tulevat', groups.upcoming],
               ['Pelatut', groups.played],
               ['Muut', groups.other],
