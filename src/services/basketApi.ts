@@ -26,55 +26,102 @@ import type {
   BasketPlayerMatch,
   DiscoveryHit,
 } from '../types/basketball'
-import { isKickoffUpcoming } from '../utils/matchContext.ts'
+import {
+  classifyMatch,
+  forfeitText,
+  periodScores,
+  scoreValue,
+  visibleScore,
+  winnerSide,
+  type MatchState,
+} from '../utils/matchStatus.ts'
 
 const API_BASE = 'https://koripallo-api.torneopal.net/taso/rest'
 const TASO_PROXY = 'https://taso-proxy.sakkoja.workers.dev/basket'
 const BASKET_KEY = 'df8e84j9xtdz269euy3h'
 
-const reqHeaders = {
-  Accept: `json/${BASKET_KEY}`,
-  Referer: 'https://tulospalvelu.basket.fi/',
+/**
+ * Thrown when Basket.fi could not be read (HTTP 403, proxy error envelope,
+ * network error) or answered "not found". Pages must show "Haku epäonnistui"
+ * for a failure — never "no games".
+ */
+export class BasketApiError extends Error {
+  readonly path: string
+  readonly notFound: boolean
+  readonly attempts: string[]
+  constructor(path: string, attempts: string[], notFound = false) {
+    super(notFound ? `Basket.fi: not found (${path})` : `Basket.fi call failed (${path}): ${attempts.join('; ')}`)
+    this.name = 'BasketApiError'
+    this.path = path
+    this.notFound = notFound
+    this.attempts = attempts
+  }
 }
 
-async function basketGet(path: string): Promise<Record<string, unknown> | null> {
-  const urls = [
-    `${TASO_PROXY}/${path}`,
+export function isNotFound(err: unknown): boolean {
+  return err instanceof BasketApiError && err.notFound
+}
+
+/**
+ * Order: direct Torneopal (the browser sends the page origin as Referer, which
+ * Torneopal accepts), then a cache-busted direct call (Torneopal's CDN can
+ * cache a 403 for a URL), then the shared taso-proxy. On 2026-10-08 the proxy
+ * answered HTTP 200 with {"call":{"status":"error","http":403},"error":"upstream"}
+ * for every basket call, so a 200 is never trusted without call.status "ok".
+ */
+export function basketUrls(path: string, now = Date.now()): string[] {
+  return [
     `${API_BASE}/${path}`,
-    `${API_BASE}/${path}${path.includes('?') ? '&' : '?'}_cb=${Date.now()}`,
+    `${API_BASE}/${path}${path.includes('?') ? '&' : '?'}_cb=${now}`,
+    `${TASO_PROXY}/${path}`,
   ]
-  for (const url of urls) {
+}
+
+async function basketGet(path: string): Promise<Record<string, unknown>> {
+  const attempts: string[] = []
+  for (const url of basketUrls(path)) {
+    const label = url.includes('taso-proxy') ? 'taso-proxy' : url.includes('_cb=') ? 'torneopal+cb' : 'torneopal'
     try {
       const res = await fetch(url, {
-        headers: url.includes('taso-proxy') ? { Accept: 'application/json' } : reqHeaders,
+        headers: url.includes('taso-proxy') ? { Accept: 'application/json' } : { Accept: `json/${BASKET_KEY}` },
+        referrerPolicy: 'strict-origin-when-cross-origin',
       })
-      if (!res.ok) continue
-      const text = await res.text()
-      const i = text.indexOf('{')
-      if (i < 0) continue
-      const data = JSON.parse(text.slice(i)) as Record<string, unknown> & {
-        call?: { status?: string }
+      if (!res.ok) {
+        attempts.push(`${label} HTTP ${res.status}`)
+        continue
+      }
+      const body = await res.text()
+      const at = body.indexOf('{"call"')
+      const i = at >= 0 ? at : body.indexOf('{')
+      if (i < 0) {
+        attempts.push(`${label} empty body`)
+        continue
+      }
+      const data = JSON.parse(body.slice(i)) as Record<string, unknown> & {
+        call?: { status?: string; http?: number; error_message?: string }
         error?: string
       }
       const status = String(data?.call?.status || '').toLowerCase()
-      if (data.error === 'upstream') continue
-      if (status && status !== 'ok') continue
-      return data
-    } catch {
-      /* try next */
+      if (status === 'ok') return data
+      const message = String(data?.call?.error_message || data.error || status || 'no status')
+      if (/not found/i.test(message)) throw new BasketApiError(path, [`${label} ${message}`], true)
+      attempts.push(`${label} ${data?.call?.http ? `upstream ${data.call.http}` : message}`)
+    } catch (err) {
+      if (err instanceof BasketApiError) throw err
+      attempts.push(`${label} ${err instanceof Error ? err.message : String(err)}`)
     }
   }
-  return null
+  throw new BasketApiError(path, attempts)
 }
 
 type CacheEntry = { at: number; data: Record<string, unknown>; ttl: number }
 const memCache = new Map<string, CacheEntry>()
 
-async function basketGetCached(path: string, ttlMs = 5 * 60 * 1000): Promise<Record<string, unknown> | null> {
+async function basketGetCached(path: string, ttlMs = 5 * 60 * 1000): Promise<Record<string, unknown>> {
   const hit = memCache.get(path)
   if (hit && Date.now() - hit.at < hit.ttl) return hit.data
   const data = await basketGet(path)
-  if (data) memCache.set(path, { at: Date.now(), data, ttl: ttlMs })
+  memCache.set(path, { at: Date.now(), data, ttl: ttlMs })
   return data
 }
 
@@ -86,6 +133,13 @@ function n(v: unknown, fallback = 0): number {
 function str(v: unknown, fallback = ''): string {
   if (v == null) return fallback
   return String(v).trim()
+}
+
+function decimal(v: unknown): number | undefined {
+  const s = str(v)
+  if (!/^-?\d+(\.\d+)?$/.test(s)) return undefined
+  const x = Number(s)
+  return x === 0 ? undefined : x
 }
 
 function numericId(v: unknown): string | undefined {
@@ -184,26 +238,75 @@ export function parseBasketResourceFromLocation(href: string): BasketResource {
   return { kind: 'none' }
 }
 
-export function mapLineupPlayer(p: Record<string, unknown>, teamName: string, teamId?: string): BasketRosterPlayer {
+export interface LineupStatOptions {
+  /** track_scorers=1 on the game: lineup points/fouls were recorded. */
+  stats?: boolean
+  /** track_assists=1 on the game. Basket.fi games seen so far have 0. */
+  assists?: boolean
+  /** Three-pointers per player_id, counted from scoring events. */
+  threes?: Map<string, number> | null
+}
+
+function statOrNull(v: unknown, enabled: boolean | undefined): number | null {
+  if (!enabled) return null
+  const x = scoreValue(v)
+  return x === undefined ? null : x
+}
+
+export function mapLineupPlayer(
+  p: Record<string, unknown>,
+  teamName: string,
+  teamId?: string,
+  opts: LineupStatOptions = {},
+): BasketRosterPlayer {
   const first = str(p.first_name)
   const last = str(p.last_name)
   const full = `${first} ${last}`.trim() || str(p.player_name, 'Pelaaja')
+  const playerId = str(p.player_id)
+  const captain = str(p.captain).toUpperCase()
   return {
-    playerId: str(p.player_id),
+    playerId,
     fullName: full,
     shirtNumber: str(p.shirt_number),
     teamId: teamId || (p.team_id ? str(p.team_id) : undefined),
     teamName,
-    points: n(p.points ?? p.player_points ?? p.goals),
-    assists: n(p.assists),
-    fouls: n(p.fouls ?? p.personal_fouls),
-    threePointers: n(p.three_pointers ?? p.threes ?? p['3p']),
-    isCaptain: p.captain === 1 || p.captain === '1' || p.captain === true,
-    birthYear: p.birthyear ? str(p.birthyear) : undefined,
+    points: statOrNull(p.points, opts.stats),
+    assists: statOrNull(p.assists, opts.stats && opts.assists),
+    fouls: statOrNull(p.fouls, opts.stats),
+    threePointers: opts.stats && opts.threes ? (opts.threes.get(playerId) ?? 0) : null,
+    isCaptain: captain === 'C' || captain === '1' || p.captain === true,
+    starter: str(p.start) === '1' ? true : undefined,
+    birthYear: p.birthyear && /^\d{4}$/.test(str(p.birthyear)) ? str(p.birthyear) : undefined,
   }
 }
 
-export function extractMatchLineups(m: Record<string, unknown>): { home: BasketRosterPlayer[]; away: BasketRosterPlayer[] } {
+/**
+ * Three-pointers per player from TASO scoring events: code "maali",
+ * description "<points> <home>-<away>". Returns null when the game has no
+ * scoring events with players (then 3P is unknown, not 0).
+ */
+export function threesFromEvents(events: unknown): Map<string, number> | null {
+  if (!Array.isArray(events)) return null
+  const out = new Map<string, number>()
+  let scoring = 0
+  for (const e of events as Record<string, unknown>[]) {
+    if (str(e?.code) !== 'maali' || !str(e.player_id)) continue
+    scoring++
+    const pts = Number(str(e.description).split(/\s+/)[0])
+    if (pts === 3) out.set(str(e.player_id), (out.get(str(e.player_id)) || 0) + 1)
+  }
+  return scoring > 0 ? out : null
+}
+
+export function extractMatchLineups(
+  m: Record<string, unknown>,
+  opts?: LineupStatOptions,
+): { home: BasketRosterPlayer[]; away: BasketRosterPlayer[] } {
+  const statOpts: LineupStatOptions = opts ?? {
+    stats: str(m.track_scorers) === '1' || m.track_scorers === undefined,
+    assists: str(m.track_assists) === '1',
+    threes: threesFromEvents(m.events),
+  }
   const homeName = str(m.team_A_name, 'Koti')
   const awayName = str(m.team_B_name, 'Vieras')
   const homeId = m.team_A_id ? str(m.team_A_id) : undefined
@@ -222,229 +325,211 @@ export function extractMatchLineups(m: Record<string, unknown>): { home: BasketR
     let which: 'home' | 'away' = side === 'away' ? 'away' : 'home'
     if (homeId && tid === homeId) which = 'home'
     else if (awayId && tid === awayId) which = 'away'
-    const mapped = mapLineupPlayer(p, which === 'home' ? homeName : awayName, tid || (which === 'home' ? homeId : awayId))
+    const mapped = mapLineupPlayer(p, which === 'home' ? homeName : awayName, tid || (which === 'home' ? homeId : awayId), statOpts)
     const key = mapped.playerId || `${which}:${mapped.fullName}:${mapped.shirtNumber}`
     if (seen.has(key)) return
     seen.add(key)
     ;(which === 'home' ? home : away).push(mapped)
   }
 
-  if (Array.isArray(m.lineup_A)) (m.lineup_A as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => push(p, 'home'))
-  if (Array.isArray(m.lineup_B)) (m.lineup_B as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => push(p, 'away'))
-  if (Array.isArray(m.team_A_players)) (m.team_A_players as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => push(p, 'home'))
-  if (Array.isArray(m.team_B_players)) (m.team_B_players as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => push(p, 'away'))
-  if (Array.isArray(m.lineups)) (m.lineups as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => push(p, ''))
-  if (Array.isArray(m.players)) (m.players as Record<string, unknown>[]).forEach((p: Record<string, unknown>) => push(p, ''))
+  if (Array.isArray(m.lineup_A)) (m.lineup_A as Record<string, unknown>[]).forEach((p) => push(p, 'home'))
+  if (Array.isArray(m.lineup_B)) (m.lineup_B as Record<string, unknown>[]).forEach((p) => push(p, 'away'))
+  if (Array.isArray(m.lineups)) (m.lineups as Record<string, unknown>[]).forEach((p) => push(p, ''))
   return { home, away }
 }
 
 function leadersFromRosters(home: BasketRosterPlayer[], away: BasketRosterPlayer[]): BasketPlayerLeader[] {
   return [...home, ...away]
+    .filter((p) => p.points !== null)
     .map((p) => ({
       playerId: p.playerId || undefined,
       playerName: p.fullName,
       shirtNumber: p.shirtNumber,
       teamName: p.teamName,
-      points: p.points,
+      points: p.points as number,
       threePointers: p.threePointers,
       fouls: p.fouls,
     }))
-    .sort((a, b) => b.points - a.points || b.threePointers - a.threePointers)
+    .sort((a, b) => b.points - a.points || (b.threePointers ?? 0) - (a.threePointers ?? 0))
+}
+
+/** Season roster from getTeam. TASO leaves every stat field blank here, so none are mapped. */
+export function mapTeamRoster(t: Record<string, unknown>, fallbackTeamId = ''): BasketRosterPlayer[] {
+  if (!Array.isArray(t.players)) return []
+  const teamName = str(t.team_name)
+  return (t.players as Record<string, unknown>[]).map((p) => mapLineupPlayer(p, teamName, str(t.team_id || fallbackTeamId)))
 }
 
 export async function fetchBasketTeamRoster(teamId: string): Promise<BasketRosterPlayer[]> {
   if (!teamId) return []
-  const data = await basketGet(`getTeam?team_id=${encodeURIComponent(teamId)}&players=1`)
+  const data = await basketGetCached(`getTeam?team_id=${encodeURIComponent(teamId)}`, 60 * 1000)
   const t = data?.team as Record<string, unknown> | undefined
-  if (!t || !Array.isArray(t.players)) return []
-  const teamName = str(t.team_name)
-  return (t.players as Record<string, unknown>[]).map((p: Record<string, unknown>) => mapLineupPlayer(p, teamName, str(t.team_id || teamId)))
+  if (!t) return []
+  return mapTeamRoster(t, teamId)
 }
 
-export function mapMatchFixture(m: Record<string, unknown>, selectedTeamId?: string): BasketTeamFixture {
+export function mapMatchFixture(m: Record<string, unknown>, selectedTeamId?: string, now = new Date()): BasketTeamFixture {
   const rawDate = str(m.date)
   const rawTime = str(m.time)
   const rawCat = str(m.category_name)
-  let scoreHome = m.fs_A != null && m.fs_A !== '' ? Number(m.fs_A) : undefined
-  let scoreAway = m.fs_B != null && m.fs_B !== '' ? Number(m.fs_B) : undefined
-  const st = str(m.status).toLowerCase()
-  const live = st.includes('live') || st === '2'
-  const zeroZero = scoreHome === 0 && scoreAway === 0
-  if (!live && zeroZero && (isKickoffUpcoming(rawDate, rawTime) || !rawDate)) {
-    scoreHome = undefined
-    scoreAway = undefined
-  }
-  const hasScore = scoreHome !== undefined && scoreAway !== undefined
+  const state: MatchState = classifyMatch(m, now)
+  const shown = visibleScore(m, state)
   const homeId = str(m.team_A_id)
-  const isHome = selectedTeamId ? homeId === selectedTeamId : true
-  const ownScore = hasScore ? (isHome ? scoreHome : scoreAway) : undefined
-  const oppScore = hasScore ? (isHome ? scoreAway : scoreHome) : undefined
+  const awayId = str(m.team_B_id)
+  const isHome = selectedTeamId ? homeId === selectedTeamId || awayId !== selectedTeamId : true
+  const homeName = str(m.team_A_name, 'Koti')
+  const awayName = str(m.team_B_name, 'Vieras')
+  const winner = state === 'played' || state === 'forfeit' ? winnerSide(m) : undefined
+  let isWin: boolean | undefined
+  let isLoss: boolean | undefined
+  if (state === 'played' && shown) {
+    const own = isHome ? shown.home : shown.away
+    const opp = isHome ? shown.away : shown.home
+    isWin = own > opp
+    isLoss = own < opp
+  } else if (state === 'forfeit' && winner && selectedTeamId) {
+    isWin = (winner === 'home') === isHome
+    isLoss = !isWin
+  }
 
   return {
     matchId: str(m.match_id),
     date: rawDate,
     time: rawTime,
-    homeTeam: str(m.team_A_name, 'Koti'),
-    awayTeam: str(m.team_B_name, 'Vieras'),
-    homeTeamId: m.team_A_id ? str(m.team_A_id) : undefined,
-    awayTeamId: m.team_B_id ? str(m.team_B_id) : undefined,
-    score: hasScore ? `${scoreHome}–${scoreAway}` : undefined,
-    scoreHome,
-    scoreAway,
+    homeTeam: homeName,
+    awayTeam: awayName,
+    homeTeamId: homeId || undefined,
+    awayTeamId: awayId || undefined,
+    status: str(m.status),
+    state,
+    forfeitText: state === 'forfeit' ? forfeitText(homeName, awayName, m) : undefined,
+    winnerSide: winner,
+    season: m.competition_season ? str(m.competition_season) : undefined,
+    groupId: m.group_id ? str(m.group_id) : undefined,
+    score: shown ? `${shown.home}–${shown.away}` : undefined,
+    scoreHome: shown?.home,
+    scoreAway: shown?.away,
     isHome,
-    isWin: ownScore !== undefined && oppScore !== undefined ? ownScore > oppScore : undefined,
-    isDraw: ownScore !== undefined && oppScore !== undefined ? ownScore === oppScore : undefined,
-    isLoss: ownScore !== undefined && oppScore !== undefined ? ownScore < oppScore : undefined,
-    venueName: str(m.venue_name, 'Kenttä'),
+    isWin,
+    isDraw: undefined,
+    isLoss,
+    venueName: str(m.venue_name),
     categoryName: rawCat,
     competitionId: m.competition_id ? str(m.competition_id) : undefined,
     categoryId: m.category_id ? str(m.category_id) : undefined,
-    status: str(m.status),
     seasonYear: getSeasonYear(rawDate),
     seasonHalf: determineSeasonHalf(rawDate, rawCat),
   }
 }
 
-async function fetchMatchesByPath(path: string, selectedTeamId?: string): Promise<BasketTeamFixture[]> {
+/** All rows TASO returns. getMatches?team_id= lists every season oldest-first, so never slice the head. */
+async function fetchMatchesByPath(
+  path: string,
+  selectedTeamId?: string,
+  keep: (m: Record<string, unknown>) => boolean = () => true,
+): Promise<BasketTeamFixture[]> {
   const data = await basketGet(path)
   if (!Array.isArray(data?.matches)) return []
-  return (data.matches as Record<string, unknown>[]).slice(0, 40).map((m: Record<string, unknown>) => mapMatchFixture(m, selectedTeamId))
+  return (data.matches as Record<string, unknown>[]).filter(keep).map((m) => mapMatchFixture(m, selectedTeamId))
 }
 
-export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDetail | null> {
-  try {
-    const data = await basketGet(`getMatch?match_id=${encodeURIComponent(matchId)}`)
-    if (!data?.match || typeof data.match !== 'object') return null
+/** TASO can answer a filtered query with unrelated rows; keep only this team's games. */
+export function isTeamMatch(m: Record<string, unknown>, teamId: string): boolean {
+  return str(m.team_A_id) === teamId || str(m.team_B_id) === teamId
+}
 
-    const m = data.match as Record<string, unknown>
+export function mapMatchDetail(m: Record<string, unknown>, fallbackId = '', now = new Date()): BasketMatchDetail {
+  const state = classifyMatch(m, now)
+  const shown = visibleScore(m, state)
+  const showPeriods = state === 'played' || state === 'live'
+  const quarters: BasketQuarterScore[] = showPeriods ? periodScores(m) : []
+  const statsTracked = str(m.track_scorers) === '1'
+  const lineups = extractMatchLineups(m, {
+    stats: statsTracked,
+    assists: str(m.track_assists) === '1',
+    threes: threesFromEvents(m.events),
+  })
+  const leaders = state === 'played' || state === 'live' ? leadersFromRosters(lineups.home, lineups.away) : []
+  const homeName = str(m.team_A_name, 'Koti')
+  const awayName = str(m.team_B_name, 'Vieras')
+  const forfeitA = scoreValue(m.fs_A)
+  const forfeitB = scoreValue(m.fs_B)
+  const live = state === 'live'
+  const livePeriod = Number(str(m.live_period))
 
-    const quarterPair = (homeRaw: unknown, awayRaw: unknown) => {
-      const blank = (v: unknown) => v == null || String(v).trim() === ''
-      if (blank(homeRaw) && blank(awayRaw)) return null
-      const scoreHome = blank(homeRaw) ? 0 : Number(homeRaw)
-      const scoreAway = blank(awayRaw) ? 0 : Number(awayRaw)
-      if (!Number.isFinite(scoreHome) || !Number.isFinite(scoreAway)) return null
-      return { scoreHome, scoreAway }
-    }
-    const quarters: BasketQuarterScore[] = []
-    ;([1, 2, 3, 4] as const).forEach((quarter) => {
-      const pair = quarterPair(m[`p${quarter}s_A`], m[`p${quarter}s_B`])
-      if (pair) quarters.push({ quarter, ...pair })
-    })
-
-    const overtimePair = quarterPair(m.p5s_A, m.p5s_B)
-    const overtimeScore = overtimePair ?? undefined
-
-    const teamFoulsHome = Number(m.live_fouls_A || 0)
-    const teamFoulsAway = Number(m.live_fouls_B || 0)
-
-    const lineups = extractMatchLineups(m)
-    const homeSeasonRoster =
-      !lineups.home.length && m.team_A_id ? await fetchBasketTeamRoster(String(m.team_A_id)) : []
-    const awaySeasonRoster =
-      !lineups.away.length && m.team_B_id ? await fetchBasketTeamRoster(String(m.team_B_id)) : []
-    const leaders: BasketPlayerLeader[] = leadersFromRosters(lineups.home, lineups.away)
-
-    const date = String(m.date || '')
-    const time = String(m.time || '').replace(/:00$/, '').slice(0, 5)
-    const st = String(m.status || '').toLowerCase()
-    const live = st === 'live' || st.includes('live') || st === '2' || String(m.time || '').includes("'")
-    const rawA = m.fs_A != null && m.fs_A !== '' ? Number(m.fs_A) : Number.NaN
-    const rawB = m.fs_B != null && m.fs_B !== '' ? Number(m.fs_B) : Number.NaN
-    const qHome = quarters.reduce((acc, q) => acc + q.scoreHome, 0)
-    const qAway = quarters.reduce((acc, q) => acc + q.scoreAway, 0)
-    const a = Number.isFinite(rawA) ? rawA : qHome
-    const b = Number.isFinite(rawB) ? rawB : qAway
-    const scoredFinal = Number.isFinite(rawA) && Number.isFinite(rawB) && !(rawA === 0 && rawB === 0)
-    const anyQuarter = quarters.length > 0
-    const kickoffFuture = isKickoffUpcoming(date, time)
-    const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Helsinki' })
-    const phase: BasketMatchDetail['phase'] = live
-      ? 'live'
-      : scoredFinal || (anyQuarter && !kickoffFuture && date !== '' && date < today)
-        ? 'played'
-        : 'upcoming'
-    const scoreHome = phase === 'upcoming' ? 0 : a
-    const scoreAway = phase === 'upcoming' ? 0 : b
-
-    return {
-      matchId: String(m.match_id || matchId),
-      matchNumber: m.match_number ? String(m.match_number) : undefined,
-      competitionName: String(m.competition_name || 'Koripalloliitto / Eteläinen alue'),
-      categoryName: String(m.category_name || ''),
-      competitionId: m.competition_id ? String(m.competition_id) : undefined,
-      categoryId: m.category_id ? String(m.category_id) : undefined,
-      groupId: m.group_id ? String(m.group_id) : undefined,
-      date,
-      time,
-      venueName: String(m.venue_name || 'Pelihalli'),
-      venueLat: m.venue_lat ? Number(m.venue_lat) : undefined,
-      venueLon: m.venue_lon ? Number(m.venue_lon) : undefined,
-      homeTeamName: String(m.team_A_name || 'Koti'),
-      awayTeamName: String(m.team_B_name || 'Vieras'),
-      homeTeamId: m.team_A_id ? String(m.team_A_id) : undefined,
-      awayTeamId: m.team_B_id ? String(m.team_B_id) : undefined,
-      scoreHome,
-      scoreAway,
-      isLive: phase === 'live',
-      phase,
-      referee1: m.referee_1_name ? String(m.referee_1_name) : undefined,
-      referee2: m.referee_2_name ? String(m.referee_2_name) : undefined,
-      spectators: m.attendance ? Number(m.attendance) : undefined,
-      playingTimeMin: m.playing_time_min ? Number(m.playing_time_min) : 40,
-      quarters,
-      overtimeScore,
-      teamFoulsHome,
-      teamFoulsAway,
-      isHomeBonusFreeThrow: teamFoulsHome >= 5,
-      isAwayBonusFreeThrow: teamFoulsAway >= 5,
-      leaders,
-      homeRoster: lineups.home,
-      awayRoster: lineups.away,
-      homeSeasonRoster,
-      awaySeasonRoster,
-      lineupNotice: m.lineup_notice ? String(m.lineup_notice) : undefined,
-    }
-  } catch (err) {
-    console.error('[BASKET_API]', err)
-    return null
+  return {
+    matchId: str(m.match_id || fallbackId),
+    matchNumber: m.match_number ? str(m.match_number) : undefined,
+    competitionName: str(m.competition_name),
+    categoryName: str(m.category_name),
+    competitionId: m.competition_id ? str(m.competition_id) : undefined,
+    categoryId: m.category_id ? str(m.category_id) : undefined,
+    groupId: m.group_id ? str(m.group_id) : undefined,
+    date: str(m.date),
+    time: str(m.time).slice(0, 5),
+    venueName: str(m.venue_name),
+    venueLat: decimal(m.venue_lat),
+    venueLon: decimal(m.venue_lon),
+    homeTeamName: homeName,
+    awayTeamName: awayName,
+    homeTeamId: m.team_A_id ? str(m.team_A_id) : undefined,
+    awayTeamId: m.team_B_id ? str(m.team_B_id) : undefined,
+    scoreHome: shown ? shown.home : null,
+    scoreAway: shown ? shown.away : null,
+    isLive: live,
+    phase: state,
+    rawStatus: str(m.status),
+    forfeitText: state === 'forfeit' ? forfeitText(homeName, awayName, m) : undefined,
+    winnerSide: state === 'played' || state === 'forfeit' ? winnerSide(m) : undefined,
+    forfeitScore:
+      state === 'forfeit' && forfeitA !== undefined && forfeitB !== undefined && forfeitA + forfeitB > 0
+        ? { home: forfeitA, away: forfeitB }
+        : undefined,
+    referee1: m.referee_1_name ? str(m.referee_1_name) : undefined,
+    referee2: m.referee_2_name ? str(m.referee_2_name) : undefined,
+    spectators: (scoreValue(m.attendance) ?? 0) > 0 ? scoreValue(m.attendance) : undefined,
+    quarters,
+    teamFoulsHome: live ? (scoreValue(m.live_fouls_A) ?? null) : null,
+    teamFoulsAway: live ? (scoreValue(m.live_fouls_B) ?? null) : null,
+    livePeriod: live && livePeriod > 0 ? livePeriod : undefined,
+    statsTracked,
+    leaders,
+    homeRoster: lineups.home,
+    awayRoster: lineups.away,
+    homeSeasonRoster: [],
+    awaySeasonRoster: [],
+    lineupNotice: m.lineup_notice ? str(m.lineup_notice) : undefined,
   }
+}
+
+/** null = Basket.fi says the game does not exist. Throws BasketApiError when the call fails. */
+export async function fetchBasketMatch(matchId: string): Promise<BasketMatchDetail | null> {
+  let data: Record<string, unknown>
+  try {
+    data = await basketGet(`getMatch?match_id=${encodeURIComponent(matchId)}`)
+  } catch (err) {
+    if (isNotFound(err)) return null
+    throw err
+  }
+  if (!data?.match || typeof data.match !== 'object') return null
+  return mapMatchDetail(data.match as Record<string, unknown>, matchId)
 }
 
 export async function fetchBasketMatchesByTeam(teamId: string): Promise<BasketTeamFixture[]> {
   if (!teamId) return []
-  try {
-    return await fetchMatchesByPath(`getMatches?team_id=${encodeURIComponent(teamId)}`, teamId)
-  } catch (err) {
-    console.error('[BASKET_FIXTURES_API]', err)
-    return []
-  }
+  return fetchMatchesByPath(`getMatches?team_id=${encodeURIComponent(teamId)}`, teamId, (m) => isTeamMatch(m, teamId))
 }
 
-export async function fetchBasketMatchesByPlayer(playerId: string): Promise<BasketTeamFixture[]> {
-  if (!playerId) return []
-  try {
-    const fromMatches = await fetchMatchesByPath(`getMatches?player_id=${encodeURIComponent(playerId)}`)
-    if (fromMatches.length > 0) return fromMatches
-
-    const playerData = await basketGet(`getPlayer?player_id=${encodeURIComponent(playerId)}`)
-    const playerObj = playerData?.player as Record<string, unknown> | undefined
-    const candidates = [
-      playerData?.matches,
-      playerObj?.matches,
-      playerObj?.fixtures,
-      playerData?.fixtures,
-    ]
-    for (const list of candidates) {
-      if (Array.isArray(list)) {
-        return (list as Record<string, unknown>[]).slice(0, 40).map((m: Record<string, unknown>) => mapMatchFixture(m))
-      }
-    }
-    return []
-  } catch (err) {
-    console.error('[BASKET_PLAYER_MATCHES_API]', err)
-    return []
-  }
+export async function fetchBasketMatchesByGroup(
+  competitionId: string,
+  categoryId: string,
+  groupId: string,
+): Promise<BasketTeamFixture[]> {
+  return fetchMatchesByPath(
+    `getMatches?competition_id=${encodeURIComponent(competitionId)}&category_id=${encodeURIComponent(categoryId)}&group_id=${encodeURIComponent(groupId)}`,
+    undefined,
+    (m) => str(m.group_id) === groupId,
+  )
 }
 
 export async function fetchBasketTeamFixtures(teamId: string): Promise<BasketTeamFixture[]> {
@@ -511,29 +596,31 @@ export function parseBasketQuery(raw: string):
   return { kind: 'text', q: val }
 }
 
+/** The newest season's current group. No hardcoded season year. */
 export function pickCurrentGroup(groups: BasketSeasonGroup[]): BasketSeasonGroup | null {
   if (!groups.length) return null
-  const published = groups.find((g) => g.competitionStatus === 'published')
-  if (published) return published
-  const current = groups.find((g) => g.isCurrent)
-  if (current) return current
-  const season2026 = groups.find((g) => (g.seasonId || '').includes('2026'))
-  return season2026 || groups[0]
+  const newest = groups.reduce((acc, g) => ((g.seasonId || '') > acc ? g.seasonId || '' : acc), '')
+  const inNewest = groups.filter((g) => (g.seasonId || '') === newest)
+  return (
+    inNewest.find((g) => g.isCurrent && g.competitionStatus === 'published') ||
+    inNewest.find((g) => g.isCurrent) ||
+    inNewest.find((g) => g.competitionStatus === 'published') ||
+    inNewest[0] ||
+    groups[0]
+  )
 }
 
 export function lastFormForTeam(teamId: string, matches: BasketGroupMatch[]): ('V' | 'T' | 'H')[] {
+  const decided = (m: BasketGroupMatch) =>
+    (m.state === 'played' && m.scoreHome != null && m.scoreAway != null) || (m.state === 'forfeit' && Boolean(m.winnerSide))
   return matches
-    .filter(
-      (m) =>
-        m.scoreHome != null &&
-        m.scoreAway != null &&
-        (m.homeTeamId === teamId || m.awayTeamId === teamId),
-    )
+    .filter((m) => decided(m) && (m.homeTeamId === teamId || m.awayTeamId === teamId))
     .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
     .slice(0, 5)
     .map((m) => {
-      if (m.scoreHome === m.scoreAway) return 'T' as const
       const home = m.homeTeamId === teamId
+      if (m.state === 'forfeit') return (m.winnerSide === 'home') === home ? ('V' as const) : ('H' as const)
+      if (m.scoreHome === m.scoreAway) return 'T' as const
       const won = home ? m.scoreHome! > m.scoreAway! : m.scoreAway! > m.scoreHome!
       return won ? ('V' as const) : ('H' as const)
     })
@@ -562,51 +649,44 @@ export function mapGroupTeamsToStandings(
     }))
 }
 
+/** null = TASO has no such team. Throws BasketApiError when the call fails. */
 export async function fetchBasketTeamProfile(teamId: string): Promise<BasketTeamProfile | null> {
   if (!teamId) return null
-  try {
-    const data = await basketGetCached(`getTeam?team_id=${encodeURIComponent(teamId)}`, 60 * 1000)
-    const t = data?.team as Record<string, unknown> | undefined
-    if (!t) return null
+  const data = await basketGetCached(`getTeam?team_id=${encodeURIComponent(teamId)}`, 60 * 1000)
+  const t = data?.team as Record<string, unknown> | undefined
+  if (!t || !str(t.team_id)) return null
 
-    const rawPlayers = Array.isArray(t.players) ? (t.players as Record<string, unknown>[]) : []
-    const teamName = str(t.team_name, 'Koripallojoukkue')
-    const players = rawPlayers.map((p) => mapLineupPlayer(p, teamName, str(t.team_id || teamId)))
+  const teamName = str(t.team_name) || `Joukkue #${teamId}`
+  const players = mapTeamRoster(t, teamId)
 
-    const rawGroups = Array.isArray(t.groups) ? (t.groups as Record<string, unknown>[]) : []
-    const groups: BasketSeasonGroup[] = rawGroups.map((g) => ({
-      competitionId: str(g.competition_id),
-      competitionName: str(g.competition_name),
-      categoryId: str(g.category_id),
-      categoryName: str(g.category_name),
-      groupId: str(g.group_id),
-      groupName: str(g.group_name),
-      seasonId: g.competition_season ? str(g.competition_season) : undefined,
-      isCurrent: g.group_current === '1' || g.competition_status === 'published',
-      competitionStatus: g.competition_status ? str(g.competition_status) : undefined,
-    }))
+  const rawGroups = Array.isArray(t.groups) ? (t.groups as Record<string, unknown>[]) : []
+  const groups: BasketSeasonGroup[] = rawGroups.map((g) => ({
+    competitionId: str(g.competition_id),
+    competitionName: str(g.competition_name),
+    categoryId: str(g.category_id),
+    categoryName: str(g.category_name),
+    groupId: str(g.group_id),
+    groupName: str(g.group_name),
+    seasonId: g.competition_season ? str(g.competition_season) : undefined,
+    isCurrent: str(g.group_current) === '1',
+    competitionStatus: g.competition_status ? str(g.competition_status) : undefined,
+  }))
 
-    const fixtures = await fetchBasketMatchesByTeam(teamId)
-    const published = groups.find((g) => g.competitionStatus === 'published')
-    const categoryName =
-      published?.categoryName ||
-      groups[0]?.categoryName ||
-      str((t.primary_category as Record<string, unknown> | undefined)?.category_name)
+  const fixtures = await fetchBasketMatchesByTeam(teamId)
+  const current = pickCurrentGroup(groups)
+  const categoryName =
+    current?.categoryName || str((t.primary_category as Record<string, unknown> | undefined)?.category_name)
 
-    return {
-      teamId: str(t.team_id || teamId),
-      teamName,
-      clubName: str(t.club_name) || undefined,
-      clubId: t.club_id ? str(t.club_id) : undefined,
-      clubCrest: (t.club_crest as string) || (t.crest as string) || undefined,
-      categoryName,
-      players,
-      fixtures,
-      groups,
-    }
-  } catch (err) {
-    console.error('[BASKET_PROFILE_API]', err)
-    return null
+  return {
+    teamId: str(t.team_id || teamId),
+    teamName,
+    clubName: str(t.club_name) || undefined,
+    clubId: t.club_id ? str(t.club_id) : undefined,
+    clubCrest: (t.club_crest as string) || (t.crest as string) || undefined,
+    categoryName,
+    players,
+    fixtures,
+    groups,
   }
 }
 
@@ -675,11 +755,8 @@ function mapGroupTeam(t: Record<string, unknown>): BasketGroupTeam {
 }
 
 function mapGroupMatch(m: Record<string, unknown>): BasketGroupMatch {
-  const scoreHome = m.fs_A != null && m.fs_A !== '' ? n(m.fs_A) : undefined
-  const scoreAway = m.fs_B != null && m.fs_B !== '' ? n(m.fs_B) : undefined
-  const live = str(m.status).toLowerCase().includes('live') || str(m.status) === '2'
-  const zeroZero = scoreHome === 0 && scoreAway === 0
-  const upcoming = !live && zeroZero && isKickoffUpcoming(str(m.date), str(m.time))
+  const state = classifyMatch(m)
+  const shown = visibleScore(m, state)
   return {
     matchId: str(m.match_id),
     date: str(m.date),
@@ -688,9 +765,11 @@ function mapGroupMatch(m: Record<string, unknown>): BasketGroupMatch {
     awayTeam: str(m.team_B_name, 'Vieras'),
     homeTeamId: numericId(m.team_A_id),
     awayTeamId: numericId(m.team_B_id),
-    scoreHome: upcoming ? undefined : scoreHome,
-    scoreAway: upcoming ? undefined : scoreAway,
+    scoreHome: shown?.home,
+    scoreAway: shown?.away,
     status: str(m.status),
+    state,
+    winnerSide: state === 'played' || state === 'forfeit' ? winnerSide(m) : undefined,
     venueName: m.venue_name ? str(m.venue_name) : undefined,
   }
 }
@@ -707,7 +786,18 @@ export async function fetchBasketGroup(
   const g = data?.group as Record<string, unknown> | undefined
   if (!g) return null
   const teams = Array.isArray(g.teams) ? (g.teams as Record<string, unknown>[]).map(mapGroupTeam) : []
-  const matches = Array.isArray(g.matches) ? (g.matches as Record<string, unknown>[]).map(mapGroupMatch) : []
+  // getGroup carries no match list for basket; the group's games come from getMatches.
+  let rawMatches = Array.isArray(g.matches) ? (g.matches as Record<string, unknown>[]) : []
+  if (!rawMatches.length) {
+    const list = await basketGetCached(
+      `getMatches?competition_id=${encodeURIComponent(competitionId)}&category_id=${encodeURIComponent(categoryId)}&group_id=${encodeURIComponent(groupId)}`,
+      3 * 60 * 1000,
+    )
+    rawMatches = Array.isArray(list?.matches)
+      ? (list.matches as Record<string, unknown>[]).filter((m) => str(m.group_id) === groupId)
+      : []
+  }
+  const matches = rawMatches.map(mapGroupMatch)
   return {
     groupId: str(g.group_id || groupId),
     groupName: str(g.group_name),
@@ -769,52 +859,44 @@ export async function fetchBasketClub(clubId: string): Promise<BasketClubDetail 
   }
 }
 
-function pickNum(obj: Record<string, unknown> | undefined, keys: string[], fallback = 0): number {
-  if (!obj) return fallback
-  for (const k of keys) {
-    if (obj[k] != null && obj[k] !== '') {
-      const value = n(obj[k], Number.NaN)
-      if (Number.isFinite(value)) return value
-    }
-  }
-  return fallback
-}
-
 function mapPlayerMatch(m: Record<string, unknown>): BasketPlayerMatch {
-  const scoreHome = m.fs_A != null && m.fs_A !== '' ? n(m.fs_A) : undefined
-  const scoreAway = m.fs_B != null && m.fs_B !== '' ? n(m.fs_B) : undefined
-  const stats = (m.stats || m.player_stats || m.statistics || {}) as Record<string, unknown>
-  const points = pickNum(m, ['player_points', 'points', 'pts'], pickNum(stats, ['points', 'pts']))
-  const assists = pickNum(m, ['player_assists', 'assists', 'ast'], pickNum(stats, ['assists', 'ast']))
-  const fouls = pickNum(m, ['fouls', 'personal_fouls', 'pf'], pickNum(stats, ['fouls', 'pf']))
-  const threePointers = pickNum(m, ['three_pointers', 'threes', '3p'], pickNum(stats, ['three_pointers', '3p']))
+  const state = classifyMatch(m)
+  const shown = visibleScore(m, state)
   return {
     matchId: str(m.match_id),
     date: str(m.date),
     time: str(m.time),
     status: str(m.status),
+    state,
     homeTeam: str(m.team_A_name, 'Koti'),
     awayTeam: str(m.team_B_name, 'Vieras'),
     homeTeamId: numericId(m.team_A_id),
     awayTeamId: numericId(m.team_B_id),
     teamId: numericId(m.team_id),
-    scoreHome,
-    scoreAway,
+    scoreHome: shown?.home,
+    scoreAway: shown?.away,
     categoryName: str(m.category_name),
     competitionName: str(m.competition_name),
     seasonId: m.season_id ? str(m.season_id) : undefined,
-    points,
-    assists,
-    fouls,
-    threePointers,
     venueName: m.venue_name ? str(m.venue_name) : undefined,
   }
 }
 
+/**
+ * getPlayer: profile, teams with shirt numbers and `upcoming`. Its `matches`
+ * list is empty for basketball (checked 2026-10-08), so no season stats are
+ * derived from it.
+ */
 export async function fetchBasketPlayer(playerId: string): Promise<BasketPlayerProfile | null> {
-  const data = await basketGetCached(`getPlayer?player_id=${encodeURIComponent(playerId)}`, 5 * 60 * 1000)
+  let data: Record<string, unknown>
+  try {
+    data = await basketGetCached(`getPlayer?player_id=${encodeURIComponent(playerId)}`, 5 * 60 * 1000)
+  } catch (err) {
+    if (isNotFound(err)) return null
+    throw err
+  }
   const p = data?.player as Record<string, unknown> | undefined
-  if (!p) return null
+  if (!p || !str(p.player_id)) return null
   const teams: BasketPlayerTeam[] = (Array.isArray(p.teams) ? (p.teams as Record<string, unknown>[]) : []).map((t) => {
     const pc = (t.primary_category as Record<string, unknown>) || {}
     return {
@@ -832,9 +914,9 @@ export async function fetchBasketPlayer(playerId: string): Promise<BasketPlayerP
     playerId: str(p.player_id || playerId),
     firstName: str(p.first_name),
     lastName: str(p.last_name),
-    fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim() || `Pelaaja #${playerId}`,
-    birthYear: p.birthyear ? str(p.birthyear) : undefined,
-    age: p.age != null ? n(p.age) : undefined,
+    fullName: `${str(p.first_name)} ${str(p.last_name)}`.trim() || `Pelaaja #${playerId}`,
+    birthYear: p.birthyear && /^\d{4}$/.test(str(p.birthyear)) ? str(p.birthyear) : undefined,
+    age: scoreValue(p.age),
     clubId: p.club_id ? str(p.club_id) : undefined,
     clubName: p.club_name ? str(p.club_name) : undefined,
     imageUrl: (p.img_url as string) || undefined,

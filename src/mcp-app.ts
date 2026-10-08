@@ -13,6 +13,7 @@ import {
   searchDiscovery,
 } from './services/basketApi'
 import { buildBasketballStatsContract } from './types/contracts'
+import { STATE_LABEL } from './utils/matchStatus'
 import {
   connectModelContext,
   detectWebMcpConsumer,
@@ -34,7 +35,12 @@ async function getBasketballGameCardTool(args: Record<string, unknown>) {
     return textResult('matchId is required (Basket.fi match id). Do not invent one.')
   }
 
-  const match = await fetchBasketMatch(matchId)
+  let match
+  try {
+    match = await fetchBasketMatch(matchId)
+  } catch {
+    return textResult(`Basket.fi call failed for match ${matchId}. This is a fetch failure, not "no match".`)
+  }
   if (!match) {
     return textResult(`Match ${matchId} was not found on Basket.fi.`)
   }
@@ -49,13 +55,20 @@ async function getBasketballGameCardTool(args: Record<string, unknown>) {
     teamFoulsHome: match.teamFoulsHome,
     teamFoulsAway: match.teamFoulsAway,
     leaders: match.leaders,
+    phase: match.phase,
   })
 
-  const qScores = match.quarters.map((q) => `Q${q.quarter}: ${q.scoreHome}–${q.scoreAway}`).join(', ')
+  const qScores = match.quarters
+    .map((q) => `${q.quarter === 5 ? 'OT' : `Q${q.quarter}`}: ${q.scoreHome ?? ''}–${q.scoreAway ?? ''}`)
+    .join(', ')
+  const when = `${match.date} ${match.time} Europe/Helsinki`.trim()
+  const top = match.leaders[0]
   const summary =
-    match.phase === 'upcoming'
-      ? `${match.homeTeamName} vs ${match.awayTeamName} (${match.competitionName}) — upcoming ${match.date} ${match.time}.`
-      : `${match.homeTeamName} ${match.scoreHome}–${match.scoreAway} ${match.awayTeamName} (${match.competitionName}). Quarters: ${qScores}. Top scorer: ${match.leaders[0]?.playerName || 'n/a'} (${match.leaders[0]?.points || 0} pts).`
+    match.scoreHome !== null && match.scoreAway !== null
+      ? `${match.homeTeamName} ${match.scoreHome}–${match.scoreAway} ${match.awayTeamName} (${STATE_LABEL[match.phase]}, ${when}).${qScores ? ` Quarters: ${qScores}.` : ''}${top ? ` Top scorer: ${top.playerName} (${top.points} pts).` : ''}`
+      : match.forfeitText
+        ? `${match.homeTeamName} – ${match.awayTeamName}: walkover (${match.forfeitText}), ${when}. Not played.`
+        : `${match.homeTeamName} – ${match.awayTeamName}: ${STATE_LABEL[match.phase]} (${when}). No score.`
 
   return {
     content: [{ type: 'text' as const, text: summary }],
@@ -63,6 +76,7 @@ async function getBasketballGameCardTool(args: Record<string, unknown>) {
     match: {
       matchId: match.matchId,
       phase: match.phase,
+      forfeit: match.forfeitText,
       homeTeamName: match.homeTeamName,
       awayTeamName: match.awayTeamName,
       scoreHome: match.scoreHome,
@@ -111,7 +125,6 @@ async function getBasketballStandingsTool(args: Record<string, unknown>) {
       categoryName: group.categoryName,
     },
     teams: standings,
-    pointsRule: '2 points for a win, 1 for a loss (Basket.fi)',
   }
 }
 
@@ -196,7 +209,7 @@ const TOOLS: ModelContextTool[] = [
     name: 'search_basketball',
     title: 'Search Basket.fi',
     description:
-      'Search Finnish basketball on Basket.fi / Koripalloliitto. Pass a club or team name (Honka, ETEK, HNMKY), an age group (U14), a player, or a tulospalvelu.basket.fi URL.',
+      'Search Finnish basketball on Basket.fi / Koripalloliitto. Pass a club or team name (Honka, HNMKY, ToPo), an age group (U14), a player, or a tulospalvelu.basket.fi URL.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -212,7 +225,7 @@ const TOOLS: ModelContextTool[] = [
     name: 'get_basketball_game_card',
     title: 'Basketball match',
     description:
-      'Fetch a live Basket.fi match: quarter scores, team fouls (bonus at 5), and top scorers. Requires matchId. Never invent an id.',
+      'Fetch a Basket.fi match by TASO match_id: state (played, upcoming, walkover, live…), score only when played, quarter scores as recorded (blank stays blank), and lineup points when recorded. Never invent an id.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -228,7 +241,7 @@ const TOOLS: ModelContextTool[] = [
     name: 'get_basketball_standings',
     title: 'Basketball standings',
     description:
-      'Live Basket.fi standings for a group. Pass teamId, or competitionId+categoryId+groupId. 2 points for a win, 1 for a loss.',
+      'Basket.fi standings for a group, as published by Basket.fi. Pass teamId, or competitionId+categoryId+groupId.',
     inputSchema: {
       type: 'object',
       properties: {

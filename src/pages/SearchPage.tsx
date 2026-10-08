@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Calendar, Layers, Search, Shield, Trophy, User, Users } from 'lucide-react'
 import { searchDiscovery } from '../services/basketApi'
 import type { DiscoveryHit } from '../types/basketball'
+import { LoadError } from '../components/LoadError'
 
-const CHIPS = ['Honka', 'ETEK', 'HNMKY', 'U14', 'U16', 'Helsinki']
+const CHIPS = ['Honka', 'HNMKY', 'ToPo', 'U14', 'U16', 'Helsinki']
 
 export function SearchPage() {
   const [params] = useSearchParams()
@@ -13,6 +14,8 @@ export function SearchPage() {
   const [input, setInput] = useState(q)
   const [hits, setHits] = useState<DiscoveryHit[]>([])
   const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     setInput(q)
@@ -22,9 +25,16 @@ export function SearchPage() {
     }
     let cancelled = false
     setLoading(true)
+    setFailed(false)
     searchDiscovery(q)
       .then((res) => {
         if (!cancelled) setHits(res)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHits([])
+          setFailed(true)
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -32,7 +42,7 @@ export function SearchPage() {
     return () => {
       cancelled = true
     }
-  }, [q])
+  }, [q, attempt])
 
   const submit = (value: string) => {
     const next = value.trim()
@@ -67,7 +77,7 @@ export function SearchPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           autoFocus={!q}
-          placeholder="Hae Honka, ETEK tai liitä basket.fi-linkki"
+          placeholder="Hae seura, joukkue tai pelaaja"
           className="grow bg-transparent text-white text-sm px-3 py-3 min-h-12 focus:outline-none placeholder:text-slate-500"
         />
         <button type="submit" className="btn-ice mr-1.5 my-1.5">
@@ -83,6 +93,8 @@ export function SearchPage() {
       </div>
       {loading ? (
         <p className="text-sm text-slate-400">Haetaan…</p>
+      ) : failed ? (
+        <LoadError what="Hakutuloksia" onRetry={() => setAttempt((n) => n + 1)} />
       ) : !q ? (
         <p className="text-sm text-slate-500">Aloita hakemalla seuraa, sarjaa tai pelaajaa.</p>
       ) : hits.length === 0 ? (

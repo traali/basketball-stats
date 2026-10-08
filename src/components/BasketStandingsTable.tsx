@@ -15,13 +15,17 @@ function formClass(f: 'V' | 'T' | 'H') {
 export function BasketStandingsTable({ standings, highlightTeamId }: BasketStandingsTableProps) {
   const navigate = useNavigate()
   const showDraws = standings.some((row) => (row.draws || 0) > 0)
+  const showForm = standings.some((row) => row.form.length > 0)
+  if (standings.length === 0) {
+    return <p className="text-sm text-slate-500">Basket.fi ei ole julkaissut tälle lohkolle sarjataulukkoa.</p>
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-bold text-white">Sarjataulukko & Kuntopuntari</h3>
-          <p className="text-xs text-slate-400">Koripalloliiton virallinen sarjataulukko (Voitto 2p, Tappio 1p)</p>
+          <h3 className="text-sm font-bold text-white">Sarjataulukko</h3>
+          <p className="text-xs text-slate-400">Sijat ja pisteet suoraan Basket.fi:stä. Viimeiset: pelatut ottelut, uusin oikealla.</p>
         </div>
         <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">Basket.fi</span>
       </div>
@@ -39,7 +43,7 @@ export function BasketStandingsTable({ standings, highlightTeamId }: BasketStand
               <th className="py-2.5 px-3 text-center">Korit</th>
               <th className="py-2.5 px-2 text-center">Ero</th>
               <th className="py-2.5 px-3 text-center font-bold text-ice">Pisteet</th>
-              <th className="py-2.5 px-3 text-center">Kunto</th>
+              {showForm ? <th className="py-2.5 px-3 text-center">Viimeiset</th> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-hairline">
@@ -68,7 +72,7 @@ export function BasketStandingsTable({ standings, highlightTeamId }: BasketStand
                   <td className="py-2.5 px-3 text-center font-mono font-black text-ice text-sm">
                     {row.totalPoints}
                   </td>
-                  <td className="py-2.5 px-3 text-center">
+                  {showForm ? <td className="py-2.5 px-3 text-center">
                     <div className="flex items-center justify-center gap-1">
                       {row.form.map((f, i) => (
                         <span
@@ -79,7 +83,7 @@ export function BasketStandingsTable({ standings, highlightTeamId }: BasketStand
                         </span>
                       ))}
                     </div>
-                  </td>
+                  </td> : null}
                 </tr>
               )
             })}

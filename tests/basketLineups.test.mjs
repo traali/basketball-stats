@@ -9,6 +9,8 @@ describe('basketball match lineups', () => {
       team_B_id: '99',
       team_A_name: 'Visa Platinum',
       team_B_name: 'ToPoLa',
+      track_scorers: '1',
+      track_assists: '1',
       lineups: [
         { player_id: '9835', first_name: 'Elina', last_name: 'Helin', shirt_number: '5', team_id: '20053', points: 0, fouls: 0, assists: 0 },
         { player_id: '1', first_name: 'Ada', last_name: 'Away', shirt_number: '7', team_id: '99', points: 12, fouls: 2, assists: 3 },

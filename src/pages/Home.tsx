@@ -5,13 +5,13 @@ import { useFavorites } from '../hooks/useFavorites'
 import { parseFederationTeamId, readLastTeamId, writeLastTeamId } from '../utils/teamSelection'
 import { CourtMark } from '../components/CourtMark'
 
-const QUICK = ['Honka', 'ETEK', 'HNMKY', 'U14', 'U16', 'Helsinki']
+const QUICK = ['Honka', 'HNMKY', 'ToPo', 'U14', 'U16', 'Helsinki']
 
 const POPULAR: Array<{ kind: 'team' | 'search'; id: string; name: string; hint: string }> = [
   { kind: 'search', id: 'Tapiolan Honka', name: 'Tapiolan Honka', hint: 'Hae seuroista' },
   { kind: 'search', id: 'HNMKY', name: 'HNMKY', hint: 'Hae seuroista' },
-  { kind: 'search', id: 'ETEK', name: 'ETEK', hint: 'Hae seuroista' },
-  { kind: 'search', id: 'ToPo', name: 'ToPo Juniorit', hint: 'Hae seuroista' },
+  { kind: 'search', id: 'Topo Juniorit', name: 'Topo Juniorit', hint: 'Hae seuroista' },
+  { kind: 'search', id: 'Espoo Basket Team', name: 'Espoo Basket Team', hint: 'Hae seuroista' },
 ]
 
 export function Home() {
@@ -101,7 +101,7 @@ export function Home() {
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Hae Honka, ETEK tai liitä basket.fi-linkki"
+          placeholder="Hae seura, joukkue tai pelaaja"
           className="grow bg-transparent border-none text-white text-sm px-3.5 py-3.5 min-h-12 focus:outline-none placeholder:text-slate-500"
         />
         <button type="submit" className="btn-ice mr-1.5 my-1.5">

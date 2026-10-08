@@ -1,63 +1,58 @@
 import type { BasketMatchDetail, BasketStandingRow } from '../types/basketball'
+import { STATE_LABEL } from './matchStatus.ts'
+import { formatGameDateTime } from './formatFi.ts'
 
-export function buildBasketPreviewMd(opts: {
-  match: BasketMatchDetail
-  standings?: BasketStandingRow[]
-}): string {
+/** Markdown from Basket.fi data only. Blank periods stay blank; no team-foul or bonus guesses. */
+export function buildBasketPreviewMd(opts: { match: BasketMatchDetail; standings?: BasketStandingRow[] }): string {
   const m = opts.match
-  const upcoming = m.phase === 'upcoming'
-  const qStr = upcoming
-    ? ''
-    : m.quarters.map((q) => `Q${q.quarter} ${q.scoreHome}–${q.scoreAway}`).join(', ')
+  const hasScore = m.scoreHome !== null && m.scoreAway !== null
+  const qStr = m.quarters
+    .map((q) => `${q.quarter === 5 ? 'JA' : `Q${q.quarter}`} ${q.scoreHome ?? ''}–${q.scoreAway ?? ''}`)
+    .join(', ')
   const table = (opts.standings || [])
-    .map((r) => `${r.rank}. ${r.teamName}  ${r.matchesPlayed}ott ${r.wins}V ${r.losses}H  ${r.pointsFor}–${r.pointsAgainst}  ${r.totalPoints}p`)
+    .map(
+      (r) =>
+        `${r.rank}. ${r.teamName}  ${r.matchesPlayed} ott ${r.wins}V ${r.losses}H  ${r.pointsFor}–${r.pointsAgainst}  ${r.totalPoints} p`,
+    )
     .join('\n')
   const scorers = m.leaders.length
     ? m.leaders
         .slice(0, 8)
-        .map((p) => `- ${p.playerName} (${p.teamName}) ${p.points}p${p.threePointers ? ` · ${p.threePointers}×3P` : ''} · ${p.fouls} virhettä`)
+        .map(
+          (p) =>
+            `- ${p.playerName} (${p.teamName}) ${p.points} p${p.threePointers ? ` · ${p.threePointers}×3P` : ''}${p.fouls !== null ? ` · ${p.fouls} virhettä` : ''}`,
+        )
         .join('\n')
-    : '_ei pörssiä_'
+    : '_ei pelaajakohtaisia pisteitä Basket.fi:ssä_'
+
+  const status = hasScore
+    ? `${STATE_LABEL[m.phase]}: ${m.scoreHome}–${m.scoreAway}`
+    : m.forfeitText
+      ? `Luovutus: ${m.forfeitText}`
+      : `Tila: ${STATE_LABEL[m.phase]}`
 
   return [
-    `# ${m.homeTeamName} vs ${m.awayTeamName}`,
+    `# ${m.homeTeamName} – ${m.awayTeamName}`,
     '',
-    `${m.date}${m.time ? ` ${m.time}` : ''} · ${m.venueName || ''}`,
-    `${m.competitionName} · ${m.categoryName}`,
-    upcoming ? 'Vaihe: ennakko' : `Tulos: ${m.scoreHome}–${m.scoreAway}`,
+    `${formatGameDateTime(m.date, m.time)} (Helsingin aikaa)${m.venueName ? ` · ${m.venueName}` : ''}`,
+    [m.competitionName, m.categoryName].filter(Boolean).join(' · '),
+    status,
     qStr ? `Neljännekset: ${qStr}` : '',
-    m.overtimeScore ? `JA: ${m.overtimeScore.scoreHome}–${m.overtimeScore.scoreAway}` : '',
     '',
     '## Sarjataulukko',
     table ? `\`\`\`\n${table}\n\`\`\`` : '_ei taulukkoa_',
     '',
-    '## Pistepörssi',
+    '## Pistetilasto',
     scorers,
     '',
-    '## Joukkuevirheet',
-    `- ${m.homeTeamName}: ${m.teamFoulsHome}/5${m.isHomeBonusFreeThrow ? ' (bonus)' : ''}`,
-    `- ${m.awayTeamName}: ${m.teamFoulsAway}/5${m.isAwayBonusFreeThrow ? ' (bonus)' : ''}`,
-    '',
-    '## Prompt tekoälylle',
-    '',
-    'Kopioi tämä osio + yllä oleva data malliin. Vastaa suomeksi, valmentajalle, juniori koripallo.',
+    '## Ohje tekoälylle',
     '',
     '```',
-    'Olet juniorikoripallon otteluanalyytikko. Käytä VAIN tämän dokumentin lukuja. Älä keksi heittoja, syöttöjä tai plus-miinusta. Jos tieto puuttuu, sano "ei datassa". Ei xG, ei NBA-advanced.',
-    '',
-    `Ottelu: ${m.homeTeamName} vs ${m.awayTeamName}, ${m.date}${m.time ? ` ${m.time}` : ''}.`,
-    '',
-    'Tee tämä rakenne:',
-    '1. Ennakko tai neljännesanalyysi (Q1–Q4, jos JA).',
-    '2. Avainpelaajat: pisteet, 3P, virheet. Bonus-vapaaheittotilanne.',
-    '3. Ennuste: 3 skenaariota (koti / tasainen / vieras) pistehaarukalla.',
-    '4. Valmentajan 4 tekoa: avausneljännes, virhetilanne, timeoutit, loppuhetket.',
-    '',
-    'Sävy: asiallinen. Juniorit. 4 neljännestä, ei jalkapallon keltaisia, ei salibandyn jäähyjä.',
+    'Käytä VAIN tämän dokumentin tietoja. Älä keksi lukuja, prosentteja tai ennusteita. Jos tieto puuttuu, sano "ei datassa".',
     '```',
     '',
-    `_Luotu basketball-stats, ottelu ${m.matchId}_`,
+    `_Lähde: Basket.fi (Torneopal), ottelu ${m.matchId}_`,
   ]
-    .filter((l) => l !== '')
+    .filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
     .join('\n')
 }
