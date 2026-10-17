@@ -10,6 +10,7 @@ import { BasketRosterCards } from '../components/BasketRosterCards'
 import { LoadError } from '../components/LoadError'
 import { FederationLink } from '../components/FederationLink'
 import { federationMatchUrl } from '../utils/federationLinks'
+import { isBracketGroupType, tournamentKey } from '../utils/tournament'
 import {
   fetchBasketMatch,
   fetchBasketGroup,
@@ -140,6 +141,16 @@ export function MatchPage() {
     score: match.scoreHome !== null && match.scoreAway !== null ? `${match.scoreHome}–${match.scoreAway}` : undefined,
   })
 
+  const tourKey =
+    match.competitionId && match.categoryId && match.groupId && (match.roundId || isBracketGroupType(match.groupType))
+      ? tournamentKey({
+          competitionId: match.competitionId,
+          categoryId: match.categoryId,
+          groupId: match.groupId,
+          roundId: match.roundId,
+        })
+      : undefined
+
   const tabs: Array<{ id: MatchTab; label: string; icon: typeof Calendar }> = [
     { id: 'match', label: 'Ottelu', icon: Calendar },
     { id: 'roster', label: 'Kokoonpano', icon: Users },
@@ -171,11 +182,13 @@ export function MatchPage() {
         Takaisin
       </button>
 
-      <QuarterScoreCard
-        match={match}
-        onOpenHome={match.homeTeamId ? () => navigate(`/team/${match.homeTeamId}`) : undefined}
-        onOpenAway={match.awayTeamId ? () => navigate(`/team/${match.awayTeamId}`) : undefined}
-      />
+      {match.tie ? null : (
+        <QuarterScoreCard
+          match={match}
+          onOpenHome={match.homeTeamId ? () => navigate(`/team/${match.homeTeamId}`) : undefined}
+          onOpenAway={match.awayTeamId ? () => navigate(`/team/${match.awayTeamId}`) : undefined}
+        />
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 -mt-2">
         {match.competitionId && match.categoryId && match.groupId ? (
@@ -191,6 +204,43 @@ export function MatchPage() {
         )}
         <FederationLink href={federationMatchUrl(match.matchId)} label="Ottelu Basket.fi-tulospalvelussa" />
       </div>
+
+      {match.tie ? (
+        <div className="rounded-2xl border border-amber-700/50 bg-amber-950/20 p-3 text-xs text-amber-100 space-y-1" data-testid="tie-summary">
+          <p className="text-[11px] text-amber-200/80">{[match.competitionName, match.categoryName].filter(Boolean).join(' · ')}</p>
+          <p className="font-semibold">
+            {match.tie === 'series' ? 'Ottelusarjan yhteenveto' : 'Kaksiosaisen otteluparin yhteenveto'} – ei yksittäinen ottelu.
+          </p>
+          {match.tieResult ? null : (
+            <p>
+              {match.homeTeamName} – {match.awayTeamName}
+            </p>
+          )}
+          {match.tieResult ? (
+            <p>
+              {match.homeTeamName} {match.tieResult.home}–{match.tieResult.away} {match.awayTeamName} (
+              {match.tie === 'series' ? 'voitot' : 'yhteispisteet'})
+            </p>
+          ) : (
+            <p>Ratkeaa osaotteluissa.</p>
+          )}
+        </div>
+      ) : null}
+
+      {match.placement || match.roundHost || tourKey ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 -mt-2 text-[11px] text-slate-400">
+          <span>
+            {[match.roundHost ? `Turnaus, isäntä ${match.roundHost}` : '', match.placement ? match.placement[0].toUpperCase() + match.placement.slice(1) : '']
+              .filter(Boolean)
+              .join(' · ')}
+          </span>
+          {tourKey ? (
+            <button type="button" onClick={() => navigate(`/tournament/${tourKey}`)} className="text-xs font-semibold text-ice min-h-11">
+              Turnauksen ottelut →
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {dayGames.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">

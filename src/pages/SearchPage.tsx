@@ -7,7 +7,7 @@ import { LoadError } from '../components/LoadError'
 import { FavoriteButton } from '../components/FavoriteButton'
 import { useFavorites, type FavKind } from '../hooks/useFavorites'
 
-const CHIPS = ['Honka', 'HNMKY', 'ToPo', 'U14', 'U16', 'Helsinki']
+const CHIPS = ['Honka', 'HNMKY', 'ToPo', 'U14', 'U16', 'Helsinki', 'Turnaus', 'Cup']
 const EMPTY: SearchOutcome = { hits: [], failed: false }
 
 export function SearchPage() {
@@ -78,6 +78,7 @@ export function SearchPage() {
     match: hits.filter((h) => h.kind === 'match'),
     competition: hits.filter((h) => h.kind === 'competition'),
     category: hits.filter((h) => h.kind === 'category'),
+    tournament: hits.filter((h) => h.kind === 'tournament'),
   }
 
   return (
@@ -85,7 +86,7 @@ export function SearchPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Haku</h1>
         <p className="text-xs text-slate-400 mt-1">
-          Seura, joukkue (esim. «LePy U16»), sarja tai pelaaja seuran kanssa (esim. «Pyrintö Virtanen»). Myös Basket.fi-linkki tai tunnus.
+          Seura, joukkue (esim. «LePy U16»), sarja, turnaus (esim. «turnaus U10») tai pelaaja seuran kanssa (esim. «Pyrintö Virtanen»). Myös Basket.fi-linkki tai tunnus.
         </p>
       </div>
       <form
@@ -134,6 +135,13 @@ export function SearchPage() {
           <HitGroup icon={Shield} title="Joukkueet" items={grouped.team} fav="team" onOpen={(id) => navigate(`/team/${id}`)} />
           <HitGroup icon={User} title="Pelaajat" items={grouped.player} fav="player" onOpen={(id) => navigate(`/player/${id}`)} />
           <HitGroup icon={Calendar} title="Ottelut" items={grouped.match} onOpen={(id) => navigate(`/match/${id}`)} />
+          <HitGroup
+            icon={Trophy}
+            title="Turnaukset (8 pv)"
+            items={grouped.tournament}
+            fav="tournament"
+            onOpen={(id) => navigate(`/tournament/${id}`)}
+          />
           <HitGroup icon={Trophy} title="Kilpailut" items={grouped.competition} onOpen={(id) => navigate(`/competition/${id}`)} />
           <HitGroup
             icon={Layers}

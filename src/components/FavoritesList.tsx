@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom'
-import { Shield, User, Users } from 'lucide-react'
+import { Shield, Trophy, User, Users } from 'lucide-react'
 import type { FavKind, FavoriteItem } from '../hooks/useFavorites'
 import { FavoriteButton } from './FavoriteButton'
 
-const KIND_LABEL: Record<FavKind, string> = { team: 'Joukkueet', player: 'Pelaajat', club: 'Seurat' }
-const KIND_ICON = { team: Shield, player: User, club: Users }
-const ORDER: FavKind[] = ['team', 'player', 'club']
+const KIND_LABEL: Record<FavKind, string> = { team: 'Joukkueet', player: 'Pelaajat', club: 'Seurat', tournament: 'Turnaukset' }
+const KIND_ICON = { team: Shield, player: User, club: Users, tournament: Trophy }
+const ORDER: FavKind[] = ['team', 'player', 'club', 'tournament']
 
 function favoritePath(f: FavoriteItem): string {
   return `/${f.kind}/${encodeURIComponent(f.id)}`

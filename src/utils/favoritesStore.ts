@@ -1,13 +1,13 @@
 /**
- * Favourite teams, players and clubs, saved on the phone (localStorage).
+ * Favourite teams, players, clubs and tournaments, saved on the phone (localStorage).
  * One shared store so every component and every tab sees the same list.
  * Key and format are unchanged from v1, so earlier saves still load.
  */
-export type FavKind = 'team' | 'player' | 'club'
+export type FavKind = 'team' | 'player' | 'club' | 'tournament'
 
 export interface FavoriteItem {
   kind: FavKind
-  /** Basket.fi (TASO) numeric id. */
+  /** Basket.fi (TASO) numeric id; a tournament key ("vk2627.27.303026") for a tournament. */
   id: string
   name: string
   subtitle?: string
@@ -20,8 +20,10 @@ export interface StorageLike {
 
 export const FAVORITES_KEY = 'basket.favorites.v1'
 const MAX_ITEMS = 60
-const KINDS: FavKind[] = ['team', 'player', 'club']
+const KINDS: FavKind[] = ['team', 'player', 'club', 'tournament']
 const ID_RE = /^\d+$/
+/** competition.category.group[.round] — same format as utils/tournament.ts tournamentKey. */
+const TOURNAMENT_RE = /^[A-Za-z0-9]+\.\d+\.\d+(?:\.\d+)?$/
 
 export function isValidFavorite(item: unknown): item is FavoriteItem {
   if (!item || typeof item !== 'object') return false
@@ -30,7 +32,7 @@ export function isValidFavorite(item: unknown): item is FavoriteItem {
     typeof f.kind === 'string' &&
     KINDS.includes(f.kind as FavKind) &&
     typeof f.id === 'string' &&
-    ID_RE.test(f.id.trim()) &&
+    (f.kind === 'tournament' ? TOURNAMENT_RE : ID_RE).test(f.id.trim()) &&
     typeof f.name === 'string' &&
     f.name.trim().length > 0
   )

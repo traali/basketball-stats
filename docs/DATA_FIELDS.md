@@ -94,3 +94,27 @@ efficiency, streaks, team fouls of finished games (`live_fouls_*` is live-only),
 
 `date` + `time` are Helsinki local (`time_zone: "Europe/Helsinki"`). They are formatted
 as-is and compared with the current Helsinki time.
+
+## Tournaments (turnaukset), checked 2026-10-17
+
+Every basket competition has `competition_type` "league"; tournament structure is in the group and round fields.
+Fixtures: `tests/fixtures/basket-tournament-*.json`, `basket-day-2026-10-24.json`, `basket-group-lisasarja.json`.
+
+- **Hosted round (junior turnaus):** `round_host_team_id` is set (not "0"). `round_id` groups one host's games. `round_name` is the host's name. `round_date_begin`/`round_date_end` is the window; games may still be undated (Planned).
+  On 2026-10-24 TASO had 36 such rounds. Example: etekp2627 / 35431 / group 303194, round 10, host Venom, 4 games at Jokiniemen koulu.
+- **Bracket groups:** `group_type` is not `group_stage`. The values are `knockout_final`, `knockout_bronze`, `knockout_full`, `double_elimination` (SM-karsinnat weekend, e.g. vk2627/27/303026) and `additional_group_stage` (jatkosarja). `getGroups` / `getGroup` return `group_type` and `group_host_team_id`.
+- **Placement games:** `final_position_win` and `final_position_lost` give the place for the winner and the loser (1…5). Placements are listed only from played games that have a winner.
+- **Courts:** `venue_name` is the hall/court (e.g. "Malmin palloiluhalli 2"). `venue_area_name` is the region, not a court.
+- **Placeholders:** a team that is not known yet has `team_id` "0" or "". Its name or description says where the team comes from:
+  - `v863` is the winner of `match_number` 863.
+  - `h3` is the loser of game 3.
+  - `Alkusarja/I` is 1st in Alkusarja; `Puolivälierät/1` uses digits.
+
+  getGroup lists such slots as teams (team_id "0", name "v863"). A bare number in `team_X_description` is a draw position, not a source. A placeholder is never a team link and never gets a score.
+- **Tie rows:** these are not games.
+  - **Two-leg tie:** `aggregate_match` equals its own `match_id` and the row has no date. Its fs_A/fs_B are aggregate points (e.g. 168–117). Legs carry the header id in `aggregate_match`.
+  - **Best-of series:** `match_type` "series", or `best_of_match` equals its own id with no date. fs_A/fs_B are series wins (3–0). getMatch sends the same row as status "Best-Of". Legs have `best_of_match` = header id and `best_of_sequence` 1, 2, 3…
+
+  Team, group and player game lists drop these rows. The tournament page shows them as "Ottelusarja/Ottelupari" with the result labelled as wins or points.
+- **Tables:** mikro/mini groups and cups have `current_standing` / `points` left blank for every team. Such a group gets no table, never zeros. A jatkosarja that TASO ranks (current_standing 1, 2, …) keeps its table.
+- **Live:** only TASO's status makes a game live, and only on today's Helsinki date. Four games on one court that day do not make any of them "Käynnissä" by the clock.

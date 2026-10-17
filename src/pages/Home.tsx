@@ -127,6 +127,9 @@ export function Home() {
         <button type="button" onClick={() => navigate('/browse')} className="chip border-accent/30 text-ice">
           Selaa sarjoja
         </button>
+        <button type="button" onClick={() => navigate('/tournaments')} className="chip border-accent/30 text-ice">
+          Turnaukset
+        </button>
       </div>
 
       <section className="space-y-3 surface-card">

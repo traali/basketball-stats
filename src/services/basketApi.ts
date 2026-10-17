@@ -36,6 +36,24 @@ import {
   type MatchState,
 } from '../utils/matchStatus.ts'
 import { formatGameDateTime } from '../utils/formatFi.ts'
+import {
+  buildTournamentView,
+  findTournaments,
+  groupTypeLabel,
+  hasTasoStandings,
+  isBracketGroupType,
+  isTieHeader,
+  parseTournamentKey,
+  realId,
+  rowsOfTournament,
+  teamSlot,
+  tieKind,
+  tieResult,
+  TOURNAMENT_DAYS,
+  type TournamentRef,
+  type TournamentView,
+} from '../utils/tournament.ts'
+import { helsinkiDateISO } from '../utils/matchContext.ts'
 import { cachedRoster, createRosterCache } from '../utils/rosterCache.ts'
 import {
   normalizeSearch,
@@ -156,9 +174,9 @@ function decimal(v: unknown): number | undefined {
   return x === 0 ? undefined : x
 }
 
+/** A real TASO id: digits and not "0" (TASO's id for a team that is not set yet). */
 function numericId(v: unknown): string | undefined {
-  const s = str(v)
-  return /^\d+$/.test(s) ? s : undefined
+  return realId(v)
 }
 
 function toResourceId(value: string | null | undefined): string | undefined {
@@ -473,11 +491,13 @@ export function mapMatchFixture(m: Record<string, unknown>, selectedTeamId?: str
   const rawCat = str(m.category_name)
   const state: MatchState = classifyMatch(m, now)
   const shown = visibleScore(m, state)
-  const homeId = str(m.team_A_id)
-  const awayId = str(m.team_B_id)
+  const homeSlot = teamSlot(m.team_A_name, m.team_A_id, m.team_A_description)
+  const awaySlot = teamSlot(m.team_B_name, m.team_B_id, m.team_B_description)
+  const homeId = homeSlot.id || ''
+  const awayId = awaySlot.id || ''
   const isHome = selectedTeamId ? homeId === selectedTeamId || awayId !== selectedTeamId : true
-  const homeName = str(m.team_A_name, 'Koti')
-  const awayName = str(m.team_B_name, 'Vieras')
+  const homeName = homeSlot.name
+  const awayName = awaySlot.name
   const winner = state === 'played' || state === 'forfeit' ? winnerSide(m) : undefined
   let isWin: boolean | undefined
   let isLoss: boolean | undefined
@@ -499,6 +519,8 @@ export function mapMatchFixture(m: Record<string, unknown>, selectedTeamId?: str
     awayTeam: awayName,
     homeTeamId: homeId || undefined,
     awayTeamId: awayId || undefined,
+    ...(homeSlot.placeholder ? { homePlaceholder: true } : {}),
+    ...(awaySlot.placeholder ? { awayPlaceholder: true } : {}),
     status: str(m.status),
     state,
     forfeitText: state === 'forfeit' ? forfeitText(homeName, awayName, m) : undefined,
@@ -529,7 +551,10 @@ async function fetchMatchesByPath(
 ): Promise<BasketTeamFixture[]> {
   const data = await basketGet(path)
   if (!Array.isArray(data?.matches)) return []
-  return (data.matches as Record<string, unknown>[]).filter(keep).map((m) => mapMatchFixture(m, selectedTeamId))
+  // A tie/series summary row is not a game: its fs_A/fs_B are aggregate points or series wins.
+  return (data.matches as Record<string, unknown>[])
+    .filter((m) => keep(m) && !isTieHeader(m))
+    .map((m) => mapMatchFixture(m, selectedTeamId))
 }
 
 /** TASO can answer a filtered query with unrelated rows; keep only this team's games. */
@@ -549,8 +574,11 @@ export function mapMatchDetail(m: Record<string, unknown>, fallbackId = '', now 
     threes: threesFromEvents(m),
   })
   const leaders = state === 'played' || state === 'live' ? leadersFromRosters(lineups.home, lineups.away) : []
-  const homeName = str(m.team_A_name, 'Koti')
-  const awayName = str(m.team_B_name, 'Vieras')
+  const homeSlot = teamSlot(m.team_A_name, m.team_A_id, m.team_A_description)
+  const awaySlot = teamSlot(m.team_B_name, m.team_B_id, m.team_B_description)
+  const homeName = homeSlot.name
+  const awayName = awaySlot.name
+  const tie = tieKind(m)
   const forfeitA = scoreValue(m.fs_A)
   const forfeitB = scoreValue(m.fs_B)
   const live = state === 'live'
@@ -571,10 +599,19 @@ export function mapMatchDetail(m: Record<string, unknown>, fallbackId = '', now 
     venueLon: decimal(m.venue_lon),
     homeTeamName: homeName,
     awayTeamName: awayName,
-    homeTeamId: m.team_A_id ? str(m.team_A_id) : undefined,
-    awayTeamId: m.team_B_id ? str(m.team_B_id) : undefined,
-    scoreHome: shown ? shown.home : null,
-    scoreAway: shown ? shown.away : null,
+    homeTeamId: homeSlot.id,
+    awayTeamId: awaySlot.id,
+    ...(homeSlot.placeholder ? { homePlaceholder: true } : {}),
+    ...(awaySlot.placeholder ? { awayPlaceholder: true } : {}),
+    ...(tie ? { tie } : {}),
+    groupType: m.group_type ? str(m.group_type) : undefined,
+    roundId: realId(m.round_host_team_id) && /^\d+$/.test(str(m.round_id)) ? str(m.round_id) : undefined,
+    roundHost: realId(m.round_host_team_id) ? str(m.round_host_team_name) || undefined : undefined,
+    placement: placementOf(m),
+    // A tie row's fs_A/fs_B are series wins or aggregate points: kept apart, never shown as a game score.
+    ...(tie && tieResult(m) ? { tieResult: { home: tieResult(m)!.home, away: tieResult(m)!.away } } : {}),
+    scoreHome: shown && !tie && !homeSlot.placeholder && !awaySlot.placeholder ? shown.home : null,
+    scoreAway: shown && !tie && !homeSlot.placeholder && !awaySlot.placeholder ? shown.away : null,
     isLive: live,
     phase: state,
     rawStatus: str(m.status),
@@ -587,7 +624,7 @@ export function mapMatchDetail(m: Record<string, unknown>, fallbackId = '', now 
     referee1: m.referee_1_name ? str(m.referee_1_name) : undefined,
     referee2: m.referee_2_name ? str(m.referee_2_name) : undefined,
     spectators: (scoreValue(m.attendance) ?? 0) > 0 ? scoreValue(m.attendance) : undefined,
-    quarters,
+    quarters: tie ? [] : quarters,
     teamFoulsHome: live ? (scoreValue(m.live_fouls_A) ?? null) : null,
     teamFoulsAway: live ? (scoreValue(m.live_fouls_B) ?? null) : null,
     livePeriod: live && livePeriod > 0 ? livePeriod : undefined,
@@ -599,6 +636,13 @@ export function mapMatchDetail(m: Record<string, unknown>, fallbackId = '', now 
     awaySeasonRoster: [],
     lineupNotice: m.lineup_notice ? str(m.lineup_notice) : undefined,
   }
+}
+
+function placementOf(m: Record<string, unknown>): string | undefined {
+  const win = str(m.final_position_win)
+  const lost = str(m.final_position_lost)
+  if (!win && !lost) return undefined
+  return [win ? `voittaja sijalle ${win}` : '', lost ? `häviäjä sijalle ${lost}` : ''].filter(Boolean).join(' · ')
 }
 
 /** null = Basket.fi says the game does not exist. Throws BasketApiError when the call fails. */
@@ -823,7 +867,10 @@ export async function fetchBasketGroups(competitionId: string, categoryId: strin
     competitionName: str(g.competition_name),
     categoryId: str(g.category_id || categoryId),
     categoryName: str(g.category_name),
-    teamCount: Array.isArray(g.teams) ? g.teams.length : n(g.team_count),
+    teamCount: Array.isArray(g.teams)
+      ? new Set((g.teams as Record<string, unknown>[]).map((t) => realId(t.team_id)).filter(Boolean)).size
+      : n(g.team_count),
+    groupType: g.group_type ? str(g.group_type) : undefined,
   }))
 }
 
@@ -848,14 +895,16 @@ function mapGroupTeam(t: Record<string, unknown>): BasketGroupTeam {
 function mapGroupMatch(m: Record<string, unknown>): BasketGroupMatch {
   const state = classifyMatch(m)
   const shown = visibleScore(m, state)
+  const home = teamSlot(m.team_A_name, m.team_A_id, m.team_A_description)
+  const away = teamSlot(m.team_B_name, m.team_B_id, m.team_B_description)
   return {
     matchId: str(m.match_id),
     date: str(m.date),
     time: str(m.time),
-    homeTeam: str(m.team_A_name, 'Koti'),
-    awayTeam: str(m.team_B_name, 'Vieras'),
-    homeTeamId: numericId(m.team_A_id),
-    awayTeamId: numericId(m.team_B_id),
+    homeTeam: home.name,
+    awayTeam: away.name,
+    homeTeamId: home.id,
+    awayTeamId: away.id,
     scoreHome: shown?.home,
     scoreAway: shown?.away,
     status: str(m.status),
@@ -876,7 +925,10 @@ export async function fetchBasketGroup(
   )
   const g = data?.group as Record<string, unknown> | undefined
   if (!g) return null
-  const teams = Array.isArray(g.teams) ? (g.teams as Record<string, unknown>[]).map(mapGroupTeam) : []
+  const rawTeams = Array.isArray(g.teams) ? (g.teams as Record<string, unknown>[]) : []
+  // Juniors (mikro, mini) and cups have no table: TASO leaves current_standing blank. Show none rather than zeros.
+  const standingsPublished = hasTasoStandings(rawTeams)
+  const teams = standingsPublished ? rawTeams.filter((t) => realId(t.team_id)).map(mapGroupTeam) : []
   // getGroup carries no match list for basket; the group's games come from getMatches.
   let rawMatches = Array.isArray(g.matches) ? (g.matches as Record<string, unknown>[]) : []
   if (!rawMatches.length) {
@@ -888,7 +940,7 @@ export async function fetchBasketGroup(
       ? (list.matches as Record<string, unknown>[]).filter((m) => str(m.group_id) === groupId)
       : []
   }
-  const matches = rawMatches.map(mapGroupMatch)
+  const matches = rawMatches.filter((m) => !isTieHeader(m)).map(mapGroupMatch)
   return {
     groupId: str(g.group_id || groupId),
     groupName: str(g.group_name),
@@ -896,6 +948,8 @@ export async function fetchBasketGroup(
     competitionName: str(g.competition_name),
     categoryId: str(g.category_id || categoryId),
     categoryName: str(g.category_name),
+    groupType: g.group_type ? str(g.group_type) : undefined,
+    standingsPublished,
     teams,
     matches,
   }
@@ -962,8 +1016,8 @@ function mapPlayerMatch(m: Record<string, unknown>): BasketPlayerMatch {
     time: str(m.time),
     status: str(m.status),
     state,
-    homeTeam: str(m.team_A_name, 'Koti'),
-    awayTeam: str(m.team_B_name, 'Vieras'),
+    homeTeam: teamSlot(m.team_A_name, m.team_A_id, m.team_A_description).name,
+    awayTeam: teamSlot(m.team_B_name, m.team_B_id, m.team_B_description).name,
     homeTeamId: numericId(m.team_A_id),
     awayTeamId: numericId(m.team_B_id),
     teamId: numericId(m.team_id),
@@ -1002,8 +1056,10 @@ export async function fetchBasketPlayer(playerId: string): Promise<BasketPlayerP
       shirtNumber: t.shirt_number ? str(t.shirt_number) : undefined,
     }
   })
-  const matches = (Array.isArray(p.matches) ? (p.matches as Record<string, unknown>[]) : []).map(mapPlayerMatch)
-  const upcoming = (Array.isArray(p.upcoming) ? (p.upcoming as Record<string, unknown>[]) : []).map(mapPlayerMatch)
+  const games = (v: unknown) =>
+    (Array.isArray(v) ? (v as Record<string, unknown>[]) : []).filter((m) => !isTieHeader(m)).map(mapPlayerMatch)
+  const matches = games(p.matches)
+  const upcoming = games(p.upcoming)
   return {
     playerId: str(p.player_id || playerId),
     firstName: str(p.first_name),
@@ -1030,6 +1086,88 @@ function teamLookupHit(t: Record<string, unknown> | undefined): LookupHit | null
   }
 }
 
+/* ------------------------------------------------------------ tournaments */
+
+export interface BasketTournament {
+  key: string
+  ref: TournamentRef
+  view: TournamentView
+  /** TASO's own table, only when TASO ranks the group (never for mikro/cup). */
+  standings: BasketStandingRow[]
+  /** Teams TASO lists for the group, placeholders ("v863") marked. */
+  teams: { id?: string; name: string; placeholder: boolean }[]
+  typeLabel?: string
+}
+
+function addDays(iso: string, days: number): string {
+  const d = new Date(`${iso}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+/** The next `days` Helsinki dates starting today. */
+export function helsinkiDays(days = 7, now = new Date()): string[] {
+  const today = helsinkiDateISO(now)
+  return Array.from({ length: days }, (_, i) => addDays(today, i))
+}
+
+/** Tournaments with games on one Helsinki day (getMatches?date=). Throws when Basket.fi fails. */
+export async function fetchBasketTournamentsOn(date: string): Promise<TournamentRef[]> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return []
+  const data = await basketGetCached(`getMatches?date=${date}`, 2 * 60 * 1000)
+  const rows = Array.isArray(data?.matches) ? (data.matches as Record<string, unknown>[]) : []
+  return findTournaments(rows.filter((m) => str(m.date) === date))
+}
+
+/** Tournaments in the coming week, for search. One range call. */
+export async function fetchBasketTournamentsAhead(days = TOURNAMENT_DAYS, now = new Date()): Promise<TournamentRef[]> {
+  const span = helsinkiDays(days, now)
+  const data = await basketGetCached(`getMatches?start_date=${span[0]}&end_date=${span[span.length - 1]}`, 5 * 60 * 1000)
+  const rows = Array.isArray(data?.matches) ? (data.matches as Record<string, unknown>[]) : []
+  return findTournaments(rows.filter((m) => span.includes(str(m.date))))
+}
+
+/** null = no such tournament in TASO. Throws BasketApiError when Basket.fi fails. */
+export async function fetchBasketTournament(key: string, now = new Date()): Promise<BasketTournament | null> {
+  const k = parseTournamentKey(key)
+  if (!k) return null
+  const q = `competition_id=${encodeURIComponent(k.competitionId)}&category_id=${encodeURIComponent(k.categoryId)}&group_id=${encodeURIComponent(k.groupId)}`
+  const [list, groupData] = await Promise.all([
+    basketGetCached(`getMatches?${q}`, 60 * 1000),
+    basketGetCached(`getGroup?${q}`, 3 * 60 * 1000).catch((err) => {
+      if (isNotFound(err)) return {} as Record<string, unknown>
+      throw err
+    }),
+  ])
+  const all = Array.isArray(list?.matches) ? (list.matches as Record<string, unknown>[]) : []
+  const rows = rowsOfTournament(all, k)
+  const ref = findTournaments(rows).find((r) => r.key === key)
+  if (!ref) return null
+  const g = (groupData?.group as Record<string, unknown> | undefined) || {}
+  const rawTeams = Array.isArray(g.teams) ? (g.teams as Record<string, unknown>[]) : []
+  const seen = new Set<string>()
+  const teams: BasketTournament['teams'] = []
+  for (const t of rawTeams) {
+    const slot = teamSlot(t.team_name, t.team_id)
+    const id = slot.id || `p:${slot.name}`
+    if (seen.has(id)) continue
+    seen.add(id)
+    teams.push({ id: slot.id, name: slot.name, placeholder: slot.placeholder })
+  }
+  const groupMatches = all.filter((m) => !isTieHeader(m)).map(mapGroupMatch)
+  const standings = hasTasoStandings(rawTeams)
+    ? mapGroupTeamsToStandings(rawTeams.filter((t) => realId(t.team_id)).map(mapGroupTeam), groupMatches)
+    : []
+  return {
+    key,
+    ref,
+    view: buildTournamentView(rows, now),
+    standings,
+    teams,
+    typeLabel: isBracketGroupType(ref.groupType) ? groupTypeLabel(ref.groupType) : undefined,
+  }
+}
+
 /** Real data sources for searchBasket(). */
 export const basketSearchDeps: SearchDeps = {
   clubs: fetchBasketClubs,
@@ -1037,6 +1175,7 @@ export const basketSearchDeps: SearchDeps = {
   roster: cachedRoster(fetchBasketTeamRoster, createRosterCache()),
   competitions: fetchBasketCompetitions,
   categories: fetchBasketCategories,
+  tournaments: () => fetchBasketTournamentsAhead(),
   async match(id) {
     const m = await fetchBasketMatch(id)
     if (!m) return null

@@ -10,6 +10,8 @@ import { CategoryPage } from './pages/CategoryPage'
 import { GroupPage } from './pages/GroupPage'
 import { ClubPage } from './pages/ClubPage'
 import { PlayerPage } from './pages/PlayerPage'
+import { TournamentPage } from './pages/TournamentPage'
+import { TournamentsPage } from './pages/TournamentsPage'
 import { FavoritesPage } from './pages/FavoritesPage'
 
 export const router = createHashRouter([
@@ -27,6 +29,8 @@ export const router = createHashRouter([
       { path: '/player/:playerId', element: <PlayerPage /> },
       { path: '/match/:matchId', element: <MatchPage /> },
       { path: '/favorites', element: <FavoritesPage /> },
+      { path: '/tournaments', element: <TournamentsPage /> },
+      { path: '/tournament/:key', element: <TournamentPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
