@@ -24,3 +24,16 @@ Status: **component catalog 2026-09-26**. Every file under `src/components/`. Sc
 | `FederationLink.tsx` | Match, team, club, group | Small "… Basket.fi-tulospalvelussa ↗" link | Exact tulospalvelu.basket.fi page; none for players (no such page) |
 
 Removed 2026-10-08: `TeamFoulTracker.tsx` (0/5 for every finished game), `BasketTeamOnboarding.tsx` (four made-up default teams), `BasketScheduleView.tsx` (unused, printed "Tuleva" for every game without a score).
+
+## Tournaments
+
+- **`/tournaments` (TournamentsPage):** the tournaments of one Helsinki day: today plus the next 7 days as chips. They are found in that day's `getMatches?date=` rows: hosted rounds plus bracket groups.
+- **`/tournament/:key` (TournamentPage):** the key is `competition.category.group[.round]`, e.g. `vk2627.27.303026` or `etekp2627.35431.303194.10`. The page shows:
+  - placements from placement games;
+  - ties/series;
+  - games by day, then by court (`TournamentGameRow`);
+  - undated games ("Aika avoin");
+  - the TASO table only when TASO ranks the group;
+  - the teams, with placeholders listed apart.
+- **TournamentGameRow:** placeholder sides are shown in italics and never get a score.
+- **Links in:** search (kind `tournament`, coming 8 days, "turnaus" matches all), favourites (kind `tournament`), CategoryPage (bracket groups open the tournament view), GroupPage, and MatchPage ("Turnauksen ottelut →").

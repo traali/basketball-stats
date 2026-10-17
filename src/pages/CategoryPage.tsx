@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ListTree } from 'lucide-react'
+import { ArrowLeft, ListTree, Trophy } from 'lucide-react'
+import { groupTypeLabel, isBracketGroupType, tournamentKey } from '../utils/tournament'
 import { fetchBasketGroups } from '../services/basketApi'
 import type { BasketGroupSummary } from '../types/basketball'
 import { LoadError } from '../components/LoadError'
@@ -37,20 +38,34 @@ export function CategoryPage() {
         <p className="text-sm text-slate-500">Basket.fi ei näytä tälle sarjalle lohkoja.</p>
       ) : (
         <div className="space-y-2">
-          {groups.map((g) => (
-            <button
-              key={g.groupId}
-              type="button"
-              onClick={() => navigate(`/group/${compId}/${catId}/${g.groupId}`)}
-              className="w-full text-left rounded-xl border border-hairline bg-court p-4 flex items-center gap-3 hover:border-accent/50"
-            >
-              <ListTree className="w-4 h-4 text-accent" />
-              <div>
-                <p className="text-sm font-semibold">{g.groupName}</p>
-                <p className="text-[11px] text-slate-400">{g.teamCount ? `${g.teamCount} joukkuetta` : 'Avaa taulukko'}</p>
-              </div>
-            </button>
-          ))}
+          {groups.map((g) => {
+            const bracket = isBracketGroupType(g.groupType)
+            const Icon = bracket ? Trophy : ListTree
+            return (
+              <button
+                key={g.groupId}
+                type="button"
+                onClick={() =>
+                  navigate(
+                    bracket
+                      ? `/tournament/${tournamentKey({ competitionId: compId, categoryId: catId, groupId: g.groupId })}`
+                      : `/group/${compId}/${catId}/${g.groupId}`,
+                  )
+                }
+                className="w-full text-left rounded-xl border border-hairline bg-court p-4 flex items-center gap-3 hover:border-accent/50"
+              >
+                <Icon className="w-4 h-4 text-accent" />
+                <div>
+                  <p className="text-sm font-semibold">{g.groupName}</p>
+                  <p className="text-[11px] text-slate-400">
+                    {[bracket ? groupTypeLabel(g.groupType) : '', g.teamCount ? `${g.teamCount} joukkuetta` : bracket ? '' : 'Avaa lohko']
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>

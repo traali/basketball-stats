@@ -9,6 +9,7 @@ import { LoadError } from '../components/LoadError'
 import { FederationLink } from '../components/FederationLink'
 import { federationGroupUrl } from '../utils/federationLinks'
 import { splitFixtures } from '../utils/fixtureGroups'
+import { groupTypeLabel, isBracketGroupType, tournamentKey } from '../utils/tournament'
 
 export function GroupPage() {
   const { compId = '', catId = '', groupId = '' } = useParams()
@@ -64,7 +65,22 @@ export function GroupPage() {
             </p>
             <FederationLink href={federationGroupUrl(compId, catId, groupId)} label="Lohko Basket.fi-tulospalvelussa" />
           </div>
-          <BasketStandingsTable standings={standings} />
+          {isBracketGroupType(group.groupType) ? (
+            <button
+              type="button"
+              onClick={() => navigate(`/tournament/${tournamentKey({ competitionId: compId, categoryId: catId, groupId })}`)}
+              className="text-xs font-semibold text-ice min-h-11"
+            >
+              {groupTypeLabel(group.groupType)}: ottelut päivittäin ja kentittäin →
+            </button>
+          ) : null}
+          {group.standingsPublished === false ? (
+            <p className="text-xs text-slate-400 rounded-xl border border-hairline px-3 py-2">
+              Basket.fi ei julkaise tälle lohkolle sarjataulukkoa (esim. mikro- ja minisarjat, cup), joten taulukkoa ei näytetä.
+            </p>
+          ) : (
+            <BasketStandingsTable standings={standings} />
+          )}
           {(
             [
               ['Tänään', split.live],

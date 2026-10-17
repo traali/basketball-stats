@@ -20,6 +20,7 @@ import type {
   BasketRosterPlayer,
   DiscoveryHit,
 } from '../types/basketball'
+import { tournamentSearchText, tournamentSubtitle, tournamentTitle, type TournamentRef } from '../utils/tournament.ts'
 
 export type ParsedQuery =
   | { kind: 'match' | 'team' | 'player' | 'club'; id: string }
@@ -36,6 +37,8 @@ export interface SearchDeps {
   roster: (teamId: string) => Promise<BasketRosterPlayer[]>
   competitions: () => Promise<BasketCompetition[]>
   categories: (competitionId: string) => Promise<BasketCategory[]>
+  /** Tournaments (hosted rounds, bracket groups) with games in the coming days. Optional. */
+  tournaments?: () => Promise<TournamentRef[]>
   match: (id: string) => Promise<LookupHit | null>
   team: (id: string) => Promise<LookupHit | null>
   player: (id: string) => Promise<LookupHit | null>
@@ -64,6 +67,7 @@ const EXPAND_CLUBS = 3
 const MAX_TEAMS = 40
 const MAX_PLAYERS = 30
 const MAX_CATEGORIES = 15
+const MAX_TOURNAMENTS = 15
 
 export function normalizeSearch(q: string): string {
   return q
@@ -100,7 +104,8 @@ export function teamWords(t: BasketClubTeam): string[] {
 
 function looksLikeName(tokens: string[]): boolean {
   // Letters (digits allowed after a letter), but not an age group like "u16".
-  return tokens.length > 0 && tokens.every((t) => /^[a-z][a-z0-9]+$/.test(t) && !/^u\d{1,2}$/.test(t))
+  // "turnaus" is a tournament search, not a player name.
+  return tokens.length > 0 && tokens.every((t) => /^[a-z][a-z0-9]+$/.test(t) && !/^u\d{1,2}$/.test(t) && !/^turnau/.test(t))
 }
 
 /** Teams playing this season; archived/older teams only if there are none. */
@@ -236,6 +241,10 @@ async function searchText(raw: string, deps: SearchDeps, opts: SearchOptions): P
   const tokens = q.split(' ').filter(Boolean)
   if (q.length < 2) return { hits: [], failed: false }
   const maxRosters = opts.maxRosters ?? 120
+  // Started early, read last: tournaments never block or fail the rest of the search.
+  const tournamentsP: Promise<TournamentRef[]> = deps.tournaments
+    ? deps.tournaments().catch(() => [] as TournamentRef[])
+    : Promise.resolve([])
 
   let clubs: BasketClubSummary[]
   try {
@@ -310,6 +319,7 @@ async function searchText(raw: string, deps: SearchDeps, opts: SearchOptions): P
       hits.push(...scan.hits)
       hint = rosterScanHint(scan, restForPlayers.join(' '), `seurojen ${scannedClubs.join(', ')} tämän kauden kokoonpanoissa`)
     }
+    hits.push(...tournamentHits(await tournamentsP, tokens).slice(0, MAX_TOURNAMENTS))
   } else {
     // No club in the query: favourite teams' rosters, then competitions and age groups.
     const favTeams = (opts.favoriteTeams || []).filter((t) => t.id)
@@ -351,7 +361,9 @@ async function searchText(raw: string, deps: SearchDeps, opts: SearchOptions): P
     }
     hits.push(...catHits.slice(0, MAX_CATEGORIES))
 
-    if (!hits.some((h) => h.kind === 'player') && looksLikeName(tokens)) {
+    hits.push(...tournamentHits(await tournamentsP, tokens).slice(0, MAX_TOURNAMENTS))
+
+    if (!hits.some((h) => h.kind !== 'club' && h.kind !== 'match') && looksLikeName(tokens)) {
       hint =
         favHint ??
         `Basket.fi ei tarjoa pelaajien nimihakua${favTeams.length ? ' (suosikkijoukkueiden kokoonpanot katsottu)' : ''}. Kirjoita seura ja nimi, esim. «Pyrintö Virtanen».`
@@ -359,6 +371,23 @@ async function searchText(raw: string, deps: SearchDeps, opts: SearchOptions): P
   }
 
   return { hits: dedupe(hits), failed: failed && hits.length === 0, hint }
+}
+
+/** Tournaments whose category, host, venue or group match every token ("turnaus" matches all). */
+export function tournamentHits(list: TournamentRef[], tokens: string[]): DiscoveryHit[] {
+  return list
+    .filter((t) => allMatch(tokens, words(tournamentSearchText(t))))
+    .map((t) => ({
+      kind: 'tournament' as const,
+      id: t.key,
+      title: tournamentTitle(t),
+      subtitle: [t.dates.length ? t.dates.map(shortDate).join(', ') : '', tournamentSubtitle(t)].filter(Boolean).join(' · '),
+    }))
+}
+
+function shortDate(iso: string): string {
+  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(iso)
+  return m ? `${Number(m[2])}.${Number(m[1])}.` : iso
 }
 
 function dedupe(hits: DiscoveryHit[]): DiscoveryHit[] {

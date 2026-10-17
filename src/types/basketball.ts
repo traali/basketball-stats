@@ -57,6 +57,19 @@ export interface BasketMatchDetail {
   awayTeamName: string
   homeTeamId?: string
   awayTeamId?: string
+  /** TASO has not set this team yet (e.g. "Ottelun 863 voittaja"). */
+  homePlaceholder?: boolean
+  awayPlaceholder?: boolean
+  /** This row sums up a two-leg tie or a best-of series; it is not a game. */
+  tie?: 'series' | 'aggregate'
+  /** Series wins / aggregate points of a tie row (TASO fs_A/fs_B). */
+  tieResult?: { home: number; away: number }
+  groupType?: string
+  /** Hosted junior round (turnaus): TASO round_id and host team name. */
+  roundId?: string
+  roundHost?: string
+  /** From final_position_win/lost, e.g. "voittaja sijalle 1 · häviäjä sijalle 2". */
+  placement?: string
   competitionId?: string
   categoryId?: string
   groupId?: string
@@ -98,6 +111,8 @@ export interface BasketTeamFixture {
   awayTeam: string
   homeTeamId?: string
   awayTeamId?: string
+  homePlaceholder?: boolean
+  awayPlaceholder?: boolean
   status?: string
   state: MatchState
   forfeitText?: string
@@ -230,6 +245,8 @@ export interface BasketGroupSummary {
   categoryId: string
   categoryName: string
   teamCount: number
+  /** TASO group_type: group_stage, knockout_*, double_elimination, additional_group_stage. */
+  groupType?: string
 }
 
 export interface BasketGroupTeam {
@@ -271,6 +288,9 @@ export interface BasketGroupDetail {
   competitionName: string
   categoryId: string
   categoryName: string
+  groupType?: string
+  /** TASO ranks this group. False for mikro/mini groups and cups: then no table is shown. */
+  standingsPublished?: boolean
   teams: BasketGroupTeam[]
   matches: BasketGroupMatch[]
 }
@@ -320,7 +340,7 @@ export interface BasketPlayerProfile {
 }
 
 export interface DiscoveryHit {
-  kind: 'club' | 'team' | 'match' | 'player' | 'competition' | 'category'
+  kind: 'club' | 'team' | 'match' | 'player' | 'competition' | 'category' | 'tournament'
   id: string
   title: string
   subtitle: string
