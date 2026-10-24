@@ -61,6 +61,7 @@ import {
   searchNumber,
   type LookupHit,
   type SearchDeps,
+  type DayGame,
   type SearchOptions,
   type SearchOutcome,
 } from './basketSearch.ts'
@@ -1168,6 +1169,36 @@ export async function fetchBasketTournament(key: string, now = new Date()): Prom
   }
 }
 
+const matchPlayersCache = new Map<string, { at: number; players: BasketRosterPlayer[] }>()
+
+/** Games on one Helsinki day for the bare-name player search. Throws when Basket.fi fails. */
+export async function fetchBasketDayGames(date: string): Promise<DayGame[]> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return []
+  const data = await basketGetCached(`getMatches?date=${date}`, 2 * 60 * 1000)
+  return mapDayGames(Array.isArray(data?.matches) ? (data.matches as Record<string, unknown>[]) : [], date)
+}
+
+export function mapDayGames(rows: Record<string, unknown>[], date: string): DayGame[] {
+  return rows
+    .filter((m) => str(m.date) === date && str(m.match_id))
+    .map((m) => {
+      const a = str(m.fs_A)
+      const b = str(m.fs_B)
+      const status = str(m.status).toLowerCase()
+      return {
+        matchId: str(m.match_id),
+        time: str(m.time).slice(0, 5),
+        homeId: str(m.team_A_id).replace(/^0+$/, ''),
+        homeName: str(m.team_A_name),
+        awayId: str(m.team_B_id).replace(/^0+$/, ''),
+        awayName: str(m.team_B_name),
+        score: a !== '' && b !== '' && status !== 'fixture' ? `${a}–${b}` : undefined,
+        upcoming: status === 'fixture',
+      }
+    })
+    .sort((x, y) => x.time.localeCompare(y.time))
+}
+
 /** Real data sources for searchBasket(). */
 export const basketSearchDeps: SearchDeps = {
   clubs: fetchBasketClubs,
@@ -1176,6 +1207,15 @@ export const basketSearchDeps: SearchDeps = {
   competitions: fetchBasketCompetitions,
   categories: fetchBasketCategories,
   tournaments: () => fetchBasketTournamentsAhead(),
+  dayGames: () => fetchBasketDayGames(helsinkiDateISO(new Date())),
+  async matchPlayers(id) {
+    const cached = matchPlayersCache.get(id)
+    if (cached && cached.at > Date.now() - 2 * 60 * 1000) return cached.players
+    const m = await fetchBasketMatch(id)
+    const players = m ? [...m.homeRoster, ...m.awayRoster] : []
+    matchPlayersCache.set(id, { at: Date.now(), players })
+    return players
+  },
   async match(id) {
     const m = await fetchBasketMatch(id)
     if (!m) return null
