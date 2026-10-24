@@ -43,7 +43,28 @@ export interface SearchDeps {
   team: (id: string) => Promise<LookupHit | null>
   player: (id: string) => Promise<LookupHit | null>
   clubById: (id: string) => Promise<LookupHit | null>
+  /** Today's games (getMatches?date=, Helsinki day). Optional: enables bare-name player search. */
+  dayGames?: () => Promise<DayGame[]>
+  /** Players in one game's published lineup (getMatch). */
+  matchPlayers?: (matchId: string) => Promise<BasketRosterPlayer[]>
 }
+
+/** One game of the day, as getMatches lists it. */
+export interface DayGame {
+  matchId: string
+  time: string
+  homeId: string
+  homeName: string
+  awayId: string
+  awayName: string
+  /** "51–68" when TASO has a score. */
+  score?: string
+  /** Fixture not started: lineups are not published yet. */
+  upcoming?: boolean
+}
+
+/** A bare-name search over today's games gives up after this long (hits so far are kept). */
+export const DAY_SEARCH_TIMEOUT_MS = 25000
 
 export interface SearchOptions {
   /** Saved favourite teams: their rosters are searched for a bare player name. */
@@ -52,6 +73,8 @@ export interface SearchOptions {
   maxRosters?: number
   /** Called while rosters load: progress and the hits found so far. */
   onProgress?: (p: { done: number; total: number; hits: DiscoveryHit[] }) => void
+  /** Override DAY_SEARCH_TIMEOUT_MS (tests). */
+  dayTimeoutMs?: number
 }
 
 export interface SearchOutcome {
@@ -191,6 +214,87 @@ async function scanRosters(
     failedTeams,
     skipped: sources.length - picked.length,
     total: picked.length,
+  }
+}
+
+export interface DayScan {
+  hits: DiscoveryHit[]
+  games: number
+  checked: number
+  timedOut: boolean
+  failed: boolean
+}
+
+function gameLabel(g: DayGame): string {
+  return [g.time, `${g.homeName} – ${g.awayName}`, g.score].filter(Boolean).join(' ')
+}
+
+/**
+ * Bare player name: look in the rosters of every team playing today and in the
+ * published lineups of today's games (TASO has no player name search). Rosters
+ * are cached; stops after timeoutMs and keeps what it found.
+ */
+export async function scanDayPlayers(
+  nameTokens: string[],
+  deps: SearchDeps,
+  timeoutMs = DAY_SEARCH_TIMEOUT_MS,
+  onProgress?: (done: number, total: number, hits: DiscoveryHit[]) => void,
+): Promise<DayScan> {
+  if (!deps.dayGames) return { hits: [], games: 0, checked: 0, timedOut: false, failed: false }
+  const deadline = Date.now() + timeoutMs
+  let games: DayGame[]
+  try {
+    games = await deps.dayGames()
+  } catch {
+    return { hits: [], games: 0, checked: 0, timedOut: false, failed: true }
+  }
+  const hits: DiscoveryHit[] = []
+  const seen = new Set<string>()
+  let checked = 0
+  let errors = 0
+  let timedOut = false
+  onProgress?.(0, games.length, [])
+  const take = (players: BasketRosterPlayer[], g: DayGame, side: 'home' | 'away' | '') => {
+    for (const p of players) {
+      if (!allMatch(nameTokens, words(p.fullName))) continue
+      const key = p.playerId || `${p.fullName}:${g.matchId}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      const team = side === 'home' ? g.homeName : side === 'away' ? g.awayName : p.teamName || ''
+      hits.push({
+        kind: 'player',
+        id: p.playerId || '',
+        title: p.fullName,
+        subtitle: [p.shirtNumber ? `#${p.shirtNumber}` : '', team, `tänään ${gameLabel(g)}`].filter(Boolean).join(' · '),
+      })
+      hits.push({ kind: 'match', id: g.matchId, title: `${g.homeName} – ${g.awayName}`, subtitle: [g.time, g.score].filter(Boolean).join(' · ') })
+    }
+  }
+  const timer = new Promise<'timeout'>((r) => setTimeout(() => r('timeout'), Math.max(0, deadline - Date.now())))
+  const work = mapLimit(games, ROSTER_CONCURRENCY + 2, async (g) => {
+    if (Date.now() > deadline) return
+    const [home, away] = await Promise.all(
+      [g.homeId, g.awayId].map((id) => (id ? deps.roster(id).catch(() => (errors++, [] as BasketRosterPlayer[])) : Promise.resolve([]))),
+    )
+    take(home, g, 'home')
+    take(away, g, 'away')
+    if ((!home.length || !away.length) && !g.upcoming && deps.matchPlayers && Date.now() <= deadline) {
+      try {
+        take(await deps.matchPlayers(g.matchId), g, '')
+      } catch {
+        errors++
+      }
+    }
+    checked++
+    onProgress?.(checked, games.length, hits.filter((h) => h.kind === 'player').slice(0, MAX_PLAYERS))
+  })
+  if ((await Promise.race([work, timer])) === 'timeout') timedOut = checked < games.length
+  return {
+    hits: hits.filter((h) => h.id).slice(0, MAX_PLAYERS * 2),
+    games: games.length,
+    checked,
+    timedOut,
+    failed: games.length > 0 && errors > 0 && checked === 0,
   }
 }
 
@@ -336,6 +440,14 @@ async function searchText(raw: string, deps: SearchDeps, opts: SearchOptions): P
       favHint = scan.failedTeams.length ? rosterScanHint(scan, tokens.join(' '), 'suosikkijoukkueissa') : undefined
     }
 
+    // Started now, read after competitions/categories so those are not delayed.
+    const dayP: Promise<DayScan | null> =
+      looksLikeName(tokens) && deps.dayGames
+        ? scanDayPlayers(tokens, deps, opts.dayTimeoutMs, (done, total, found) =>
+            opts.onProgress?.({ done, total, hits: dedupe([...hits, ...found]) }),
+          )
+        : Promise.resolve(null)
+
     const comps = await deps.competitions().catch(() => [] as BasketCompetition[])
     for (const c of comps) {
       if (allMatch(tokens, words(`${c.competitionName} ${c.organiser || ''}`))) {
@@ -363,9 +475,24 @@ async function searchText(raw: string, deps: SearchDeps, opts: SearchOptions): P
 
     hits.push(...tournamentHits(await tournamentsP, tokens).slice(0, MAX_TOURNAMENTS))
 
+    let dayHint: string | undefined
+    const dayScan = await dayP
+    if (dayScan) {
+      hits.unshift(...dayScan.hits)
+      if (!dayScan.hits.length) {
+        const name = tokens.join(' ')
+        dayHint = dayScan.failed || !dayScan.games
+          ? undefined
+          : dayScan.timedOut
+            ? `«${name}» ei löytynyt ${dayScan.checked}/${dayScan.games} tämän päivän pelistä ennen aikakatkaisua.`
+            : `«${name}» ei ole tämän päivän ${dayScan.games} pelin joukkueiden julkaistuissa kokoonpanoissa (Basket.fi ei julkaise kaikkien joukkueiden pelaajia).`
+      }
+    }
+
     if (!hits.some((h) => h.kind !== 'club' && h.kind !== 'match') && looksLikeName(tokens)) {
       hint =
         favHint ??
+        dayHint ??
         `Basket.fi ei tarjoa pelaajien nimihakua${favTeams.length ? ' (suosikkijoukkueiden kokoonpanot katsottu)' : ''}. Kirjoita seura ja nimi, esim. «Pyrintö Virtanen».`
     }
   }

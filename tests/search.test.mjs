@@ -88,7 +88,7 @@ describe('player search: club + name, via getTeam rosters', () => {
       assert.match(res.hint, /Ei pelaajaa «eiolemassa»/)
     }))
 
-  it('a bare name is searched in favourite teams only, with an honest hint otherwise', () =>
+  it('a bare name is searched in favourite teams (and today’s games when getMatches answers), with an honest hint otherwise', () =>
     withTaso(async () => {
       const fav = await searchBasketData('Suku257', { favoriteTeams: [{ id: '5751397', name: 'LePy' }] })
       assert.deepEqual(byKind(fav.hits, 'player').map((p) => p.id), ['59257'])
