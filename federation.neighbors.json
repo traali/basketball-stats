@@ -45,13 +45,11 @@
             ],
             "needs": [
                 "pelipaiva",
-                "sports-federation",
-                "taso-proxy"
+                "sports-federation"
             ],
             "taso": {
                 "sport": "spl",
                 "origin": "https://spl.torneopal.net/taso/rest/getSeasons",
-                "proxy": "https://taso-proxy.sakkoja.workers.dev/spl/getSeasons",
                 "accept": "json/4h7dznqdxwtp3hsfdyf5r793uahfxy7x",
                 "referer": "https://tulospalvelu.palloliitto.fi/",
                 "hashSalt": "ysnyp4h6e9egetkc3s3v"
@@ -67,13 +65,11 @@
             ],
             "needs": [
                 "pelipaiva",
-                "sports-federation",
-                "taso-proxy"
+                "sports-federation"
             ],
             "taso": {
                 "sport": "ssbl",
                 "origin": "https://salibandy-api.torneopal.net/taso/rest/getTeam?team_id=25301",
-                "proxy": "https://taso-proxy.sakkoja.workers.dev/ssbl/getTeam?team_id=25301",
                 "accept": "json/zsn3anknxzcfzc23k53jqdcd4pymutsf",
                 "referer": "https://tulospalvelu.salibandy.fi/"
             },
@@ -88,13 +84,11 @@
             ],
             "needs": [
                 "pelipaiva",
-                "sports-federation",
-                "taso-proxy"
+                "sports-federation"
             ],
             "taso": {
                 "sport": "basket",
                 "origin": "https://koripallo-api.torneopal.net/taso/rest/getCompetitions",
-                "proxy": "https://taso-proxy.sakkoja.workers.dev/basket/getCompetitions",
                 "accept": "json/df8e84j9xtdz269euy3h",
                 "referer": "https://tulospalvelu.basket.fi/"
             },
@@ -109,13 +103,11 @@
             ],
             "needs": [
                 "pelipaiva",
-                "sports-federation",
-                "taso-proxy"
+                "sports-federation"
             ],
             "taso": {
                 "sport": "volley",
                 "origin": "https://lentopallo-api.torneopal.net/taso/rest/getCompetitions",
-                "proxy": "https://taso-proxy.sakkoja.workers.dev/volley/getCompetitions",
                 "accept": "json/df8e84j9xtdz269euy3h",
                 "referer": "https://lentopallo.torneopal.net/"
             },
@@ -166,27 +158,10 @@
                 "basketball-stats",
                 "volleyball-stats",
                 "Parkkis",
-                "weather-stats",
-                "taso-proxy"
+                "weather-stats"
             ],
             "taso": null,
             "role": "kattorepo"
-        },
-        "taso-proxy": {
-            "branch": "main",
-            "live": "https://taso-proxy.sakkoja.workers.dev",
-            "provides": [
-                "SportStatsContract"
-            ],
-            "needs": [
-                "sports-federation",
-                "football-stats",
-                "floorball-stats",
-                "basketball-stats",
-                "volleyball-stats"
-            ],
-            "taso": null,
-            "role": "edge"
         }
     }
 }

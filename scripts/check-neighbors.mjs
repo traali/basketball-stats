@@ -140,7 +140,7 @@ function signTaso(url, salt) {
   return u.toString()
 }
 
-/** A real TASO answer: JSON whose call.status is not an error (proxy wraps upstream 403s as JSON). */
+/** A real TASO answer: JSON whose call.status is not an error. */
 function tasoOk(res) {
   if (!res.ok || !res.body.includes('{')) return false
   try {
@@ -162,10 +162,6 @@ async function probeTaso(taso) {
   const retry = await getText(signTaso(bustUrl, taso.hashSalt), headers)
   if (tasoOk(retry)) {
     return { ok: true, via: 'origin+_cb', status: retry.status, note: `origin ${origin.status} empty/403, cache-bust recovered` }
-  }
-  const proxy = taso.proxy ? await getText(taso.proxy, { Accept: 'application/json' }) : null
-  if (proxy && tasoOk(proxy)) {
-    return { ok: true, via: 'proxy', status: proxy.status }
   }
   return { ok: false, via: 'none', status: origin.status, note: origin.error || `origin ${origin.status}${taso.hashSalt ? ' (signed)' : ''}` }
 }
