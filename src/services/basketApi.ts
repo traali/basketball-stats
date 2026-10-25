@@ -95,25 +95,49 @@ export function isNotFound(err: unknown): boolean {
   return err instanceof BasketApiError && err.notFound
 }
 
+const TASO_SALT = 'ysnyp4h6e9egetkc3s3v'
+
+function safeDecode(v: string): string {
+  try {
+    return decodeURIComponent(v.replace(/\+/g, ' '))
+  } catch {
+    return v
+  }
+}
+
+/** Text TASO signs: '<method>?<salt>' plus '&k=v' per parameter, raw values in query order. */
+export function signingInput(path: string): string {
+  const [method, query = ''] = path.split('?')
+  let input = `${method}?${TASO_SALT}`
+  for (const part of query.split('&').filter(Boolean)) {
+    const i = part.indexOf('=')
+    const k = i < 0 ? part : part.slice(0, i)
+    const v = i < 0 ? '' : part.slice(i + 1)
+    input += `&${safeDecode(k)}=${safeDecode(v)}`
+  }
+  return input
+}
+
+async function sha256Hex(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 /**
- * Order: direct Torneopal (the browser sends the page origin as Referer, which
- * Torneopal accepts), then a cache-busted direct call (Torneopal's CDN can
- * cache a 403 for a URL), then the shared taso-proxy. On 2026-10-08 the proxy
- * answered HTTP 200 with {"call":{"status":"error","http":403},"error":"upstream"}
- * for every basket call, so a 200 is never trusted without call.status "ok".
+ * Since ~2026-10-24 koripallo-api requires the same sha256 `hash` as spl/salibandy/lentopallo
+ * (unsigned = HTTP 403). Order: signed direct Torneopal (browser Referer is accepted), then the
+ * shared taso-proxy. The proxy can answer 200 with {"call":{"status":"error","http":403}},
+ * so a 200 is never trusted without call.status "ok".
  */
-export function basketUrls(path: string, now = Date.now()): string[] {
-  return [
-    `${API_BASE}/${path}`,
-    `${API_BASE}/${path}${path.includes('?') ? '&' : '?'}_cb=${now}`,
-    `${TASO_PROXY}/${path}`,
-  ]
+export async function basketUrls(path: string): Promise<string[]> {
+  const hash = await sha256Hex(signingInput(path))
+  return [`${API_BASE}/${path}${path.includes('?') ? '&' : '?'}hash=${hash}`, `${TASO_PROXY}/${path}`]
 }
 
 async function basketGet(path: string): Promise<Record<string, unknown>> {
   const attempts: string[] = []
-  for (const url of basketUrls(path)) {
-    const label = url.includes('taso-proxy') ? 'taso-proxy' : url.includes('_cb=') ? 'torneopal+cb' : 'torneopal'
+  for (const url of await basketUrls(path)) {
+    const label = url.includes('taso-proxy') ? 'taso-proxy' : 'torneopal'
     try {
       const res = await fetch(url, {
         headers: url.includes('taso-proxy') ? { Accept: 'application/json' } : { Accept: `json/${BASKET_KEY}` },

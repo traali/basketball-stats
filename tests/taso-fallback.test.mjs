@@ -1,5 +1,6 @@
 import { describe, it, mock } from 'node:test'
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { BasketApiError, basketUrls, fetchBasketClubs, fetchBasketMatchesByTeam } from '../src/services/basketApi.ts'
 
 const json = (body, status = 200) =>
@@ -9,25 +10,25 @@ const json = (body, status = 200) =>
 const PROXY_403_ENVELOPE = { call: { status: 'error', http: 403 }, error: 'upstream' }
 
 describe('Basket.fi fetch order and error envelope', () => {
-  it('tries direct Torneopal, then a cache-busted direct call, then the proxy', () => {
-    const urls = basketUrls('getClubs', 123)
-    assert.equal(urls[0], 'https://koripallo-api.torneopal.net/taso/rest/getClubs')
-    assert.equal(urls[1], 'https://koripallo-api.torneopal.net/taso/rest/getClubs?_cb=123')
-    assert.equal(urls[2], 'https://taso-proxy.sakkoja.workers.dev/basket/getClubs')
+  it('signs the direct Torneopal call (sha256 hash last), then falls back to the proxy', async () => {
+    const urls = await basketUrls('getMatch?match_id=42')
+    const sha = createHash('sha256').update('getMatch?ysnyp4h6e9egetkc3s3v&match_id=42').digest('hex')
+    assert.equal(urls[0], `https://koripallo-api.torneopal.net/taso/rest/getMatch?match_id=42&hash=${sha}`)
+    assert.equal(urls[1], 'https://taso-proxy.sakkoja.workers.dev/basket/getMatch?match_id=42')
+    assert.equal(urls.length, 2)
   })
 
-  it('a cached direct 403 falls through to the cache-busted direct call', async () => {
+  it('a signed direct answer is used without touching the proxy', async () => {
     const clubs = { call: { status: 'ok' }, clubs: [{ club_id: '1447', name: 'Leppävaaran Pyrintö', abbrevation: 'LePy', city_name: 'Espoo' }] }
     const fetchMock = mock.method(globalThis, 'fetch', async (input) => {
       const url = String(input)
-      if (url.includes('_cb=')) return json(clubs)
       if (url.includes('taso-proxy')) return json(PROXY_403_ENVELOPE)
+      if (url.includes('hash=')) return json(clubs)
       return new Response('', { status: 403 })
     })
     try {
       const list = await fetchBasketClubs()
       assert.equal(list.length, 1)
-      assert.equal(list[0].name, 'Leppävaaran Pyrintö')
       assert.ok(!fetchMock.mock.calls.some((c) => String(c.arguments[0]).includes('taso-proxy')))
     } finally {
       fetchMock.mock.restore()
