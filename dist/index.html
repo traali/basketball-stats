@@ -1,14 +1,24 @@
 <!doctype html>
 <html lang="fi" class="dark">
   <head>
+    <script>(function(){try{var f=function pathToHashUrl(pathname, search, hash) {
+  const ROUTES = ["match", "team", "player", "club", "group", "competition", "search", "browse", "favorites"];
+  if (hash && hash.indexOf("#/") === 0) return null;
+  const clean = pathname.replace(/\/{2,}/g, "/").replace(/\/+$/, "");
+  if (!clean || clean === "/index.html") return null;
+  const first = clean.split("/")[1] || "";
+  if (ROUTES.indexOf(first) === -1) return null;
+  return "/#" + clean + (search || "");
+};var u=f(location.pathname,location.search,location.hash);if(u)location.replace(u)}catch(e){}})()</script>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B132B" />
     <title>Basketball Stats — Koripallo Torneopal</title>
-    <script type="module" crossorigin src="/assets/index-CaDrQyPs.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-C6OPgNiX.css">
+    <script type="module" crossorigin src="/assets/index-BTLf0yoU.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-B2EUQffE.css">
   </head>
-  <body class="bg-[#0B132B] text-slate-100 antialiased min-h-screen">
+  <body class="bg-canvas text-slate-100 antialiased min-h-dvh">
     <div id="root"></div>
   </body>
 </html>
