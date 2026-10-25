@@ -70,11 +70,10 @@ export { normalizeSearch }
 export type { SearchOutcome }
 
 const API_BASE = 'https://koripallo-api.torneopal.net/taso/rest'
-const TASO_PROXY = 'https://taso-proxy.sakkoja.workers.dev/basket'
 const BASKET_KEY = 'df8e84j9xtdz269euy3h'
 
 /**
- * Thrown when Basket.fi could not be read (HTTP 403, proxy error envelope,
+ * Thrown when Basket.fi could not be read (HTTP 403, error envelope,
  * network error) or answered "not found". Pages must show "Haku epäonnistui"
  * for a failure — never "no games".
  */
@@ -125,50 +124,43 @@ async function sha256Hex(text: string): Promise<string> {
 
 /**
  * Since ~2026-10-24 koripallo-api requires the same sha256 `hash` as spl/salibandy/lentopallo
- * (unsigned = HTTP 403). Order: signed direct Torneopal (browser Referer is accepted), then the
- * shared taso-proxy. The proxy can answer 200 with {"call":{"status":"error","http":403}},
- * so a 200 is never trusted without call.status "ok".
+ * (unsigned = HTTP 403). The browser calls Torneopal directly, signed (its Referer is accepted).
+ * No proxy fallback: taso-proxy was retired 2026-10-25 (upstream blocks Cloudflare egress).
+ * A 200 is never trusted without call.status "ok".
  */
-export async function basketUrls(path: string): Promise<string[]> {
+export async function basketUrl(path: string): Promise<string> {
   const hash = await sha256Hex(signingInput(path))
-  return [`${API_BASE}/${path}${path.includes('?') ? '&' : '?'}hash=${hash}`, `${TASO_PROXY}/${path}`]
+  return `${API_BASE}/${path}${path.includes('?') ? '&' : '?'}hash=${hash}`
 }
 
 async function basketGet(path: string): Promise<Record<string, unknown>> {
-  const attempts: string[] = []
-  for (const url of await basketUrls(path)) {
-    const label = url.includes('taso-proxy') ? 'taso-proxy' : 'torneopal'
-    try {
-      const res = await fetch(url, {
-        headers: url.includes('taso-proxy') ? { Accept: 'application/json' } : { Accept: `json/${BASKET_KEY}` },
-        referrerPolicy: 'strict-origin-when-cross-origin',
-      })
-      if (!res.ok) {
-        attempts.push(`${label} HTTP ${res.status}`)
-        continue
-      }
-      const body = await res.text()
-      const at = body.indexOf('{"call"')
-      const i = at >= 0 ? at : body.indexOf('{')
-      if (i < 0) {
-        attempts.push(`${label} empty body`)
-        continue
-      }
-      const data = JSON.parse(body.slice(i)) as Record<string, unknown> & {
-        call?: { status?: string; http?: number; error_message?: string }
-        error?: string
-      }
-      const status = String(data?.call?.status || '').toLowerCase()
-      if (status === 'ok') return data
-      const message = String(data?.call?.error_message || data.error || status || 'no status')
-      if (/not found/i.test(message)) throw new BasketApiError(path, [`${label} ${message}`], true)
-      attempts.push(`${label} ${data?.call?.http ? `upstream ${data.call.http}` : message}`)
-    } catch (err) {
-      if (err instanceof BasketApiError) throw err
-      attempts.push(`${label} ${err instanceof Error ? err.message : String(err)}`)
-    }
+  const url = await basketUrl(path)
+  const label = 'Basket.fi (torneopal, signed)'
+  let res: Response
+  try {
+    res = await fetch(url, {
+      headers: { Accept: `json/${BASKET_KEY}` },
+      referrerPolicy: 'strict-origin-when-cross-origin',
+    })
+  } catch (err) {
+    throw new BasketApiError(path, [`${label} network error: ${err instanceof Error ? err.message : String(err)}`])
   }
-  throw new BasketApiError(path, attempts)
+  if (!res.ok) throw new BasketApiError(path, [`${label} HTTP ${res.status}`])
+  const body = await res.text()
+  const at = body.indexOf('{"call"')
+  const i = at >= 0 ? at : body.indexOf('{')
+  if (i < 0) throw new BasketApiError(path, [`${label} empty body`])
+  let data: Record<string, unknown> & { call?: { status?: string; http?: number; error_message?: string }; error?: string }
+  try {
+    data = JSON.parse(body.slice(i))
+  } catch {
+    throw new BasketApiError(path, [`${label} invalid JSON`])
+  }
+  const status = String(data?.call?.status || '').toLowerCase()
+  if (status === 'ok') return data
+  const message = String(data?.call?.error_message || data.error || status || 'no status')
+  if (/not found/i.test(message)) throw new BasketApiError(path, [`${label} ${message}`], true)
+  throw new BasketApiError(path, [`${label} ${data?.call?.http ? `upstream ${data.call.http}` : message}`])
 }
 
 type CacheEntry = { at: number; data: Record<string, unknown>; ttl: number }
