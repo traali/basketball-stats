@@ -10,11 +10,12 @@
     "lint": "eslint src --max-warnings=0",
     "typecheck": "tsc -b --noEmit",
     "check:types": "npm run typecheck",
-    "test": "node --experimental-strip-types --test tests/basketInvariants.test.mjs tests/basketLineups.test.mjs tests/basketUrlParsing.test.mjs tests/contractsQueryParsing.test.mjs tests/discoveryParity.test.mjs tests/taso-direct.test.mjs tests/webmcp.test.mjs tests/helsinkiDate.test.mjs tests/basketRealData.test.mjs tests/search.test.mjs tests/favorites.test.mjs tests/pathToHash.test.mjs tests/tournament.test.mjs tests/daySearch.test.mjs",
+    "test": "node --experimental-strip-types --test tests/basketInvariants.test.mjs tests/basketLineups.test.mjs tests/basketUrlParsing.test.mjs tests/contractsQueryParsing.test.mjs tests/discoveryParity.test.mjs tests/taso-direct.test.mjs tests/webmcp.test.mjs tests/helsinkiDate.test.mjs tests/basketRealData.test.mjs tests/search.test.mjs tests/favorites.test.mjs tests/pathToHash.test.mjs tests/tournament.test.mjs tests/daySearch.test.mjs tests/teamHistory.test.mjs",
     "check": "npm run typecheck && npm run lint && npm run test",
     "visit": "node scripts/monastery-visitor.mjs",
     "check:neighbors": "node scripts/check-neighbors.mjs",
-    "understand": "node scripts/understand.mjs"
+    "understand": "node scripts/understand.mjs",
+    "test:e2e": "node tests/e2e/teamHistory.e2e.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^0.1.0",
@@ -35,6 +36,7 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
+    "playwright-core": "^1.65.1",
     "postcss": "^8.5.2",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.7.2",

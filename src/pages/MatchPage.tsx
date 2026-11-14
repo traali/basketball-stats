@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Calendar, Award, Trophy, Share2, Loader2, Users } from 'lucide-react'
 import clsx from 'clsx'
@@ -8,6 +8,7 @@ import { BasketStandingsTable } from '../components/BasketStandingsTable'
 import { BasketPreviewExport } from '../components/BasketPreviewExport'
 import { BasketRosterCards } from '../components/BasketRosterCards'
 import { LoadError } from '../components/LoadError'
+import { TeamBackground } from '../components/TeamBackground'
 import { FederationLink } from '../components/FederationLink'
 import { federationMatchUrl } from '../utils/federationLinks'
 import { isBracketGroupType, tournamentKey } from '../utils/tournament'
@@ -41,6 +42,21 @@ export function MatchPage() {
   const [activeTab, setActiveTab] = useState<MatchTab>('match')
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
+
+  const bgCtx = useMemo(
+    () =>
+      match
+        ? {
+            competitionId: match.competitionId || '',
+            categoryId: match.categoryId || '',
+            groupId: match.groupId || '',
+            playedAt: match.phase === 'played' && match.date ? Date.parse(`${match.date}T${(match.time || '00:00').slice(0, 5)}:00+02:00`) : undefined,
+          }
+        : null,
+    [match],
+  )
+  const bgHome = useMemo(() => ({ teamId: match?.homeTeamId || '', teamName: match?.homeTeamName || '' }), [match])
+  const bgAway = useMemo(() => ({ teamId: match?.awayTeamId || '', teamName: match?.awayTeamName || '' }), [match])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -259,6 +275,10 @@ export function MatchPage() {
           ))}
         </div>
       )}
+
+      {bgCtx && !match.tie && (match.homeTeamId || match.awayTeamId) ? (
+        <TeamBackground home={bgHome} away={bgAway} ctx={bgCtx} />
+      ) : null}
 
       <div className="flex gap-1.5 pb-1 border-b border-hairline text-xs font-semibold overflow-x-auto">
         {tabs.map((tab) => (

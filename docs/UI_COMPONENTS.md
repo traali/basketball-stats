@@ -37,3 +37,17 @@ Removed 2026-10-08: `TeamFoulTracker.tsx` (0/5 for every finished game), `Basket
   - the teams, with placeholders listed apart.
 - **TournamentGameRow:** placeholder sides are shown in italics and never get a score.
 - **Links in:** search (kind `tournament`, coming 8 days, "turnaus" matches all), favourites (kind `tournament`), CategoryPage (bracket groups open the tournament view), GroupPage, and MatchPage ("Turnauksen ottelut →").
+
+## TeamBackground ("Joukkueiden tausta") — `src/components/TeamBackground.tsx`
+Collapsed section on the match page; loads only when opened. For both teams:
+current standing (position/teams · W–L · points for–against), earlier seasons
+(autumn/spring/extra stages, aluefinaalit placing from the games, mikro years as
+"ei tuloksia", two seasons by default), and the club's other teams of the same
+age and gender (↑ ylempi / = sama / ↓ alempi taso; one age up collapsed).
+New team_id each season: link labelled "vahvistettu" (family-confirmed in
+`CONFIRMED_PREDECESSORS`, or chosen on the phone via "Valitse"/"Vaihda",
+`basket.predecessors.v1`), "arvio" (coach/level/name score, only with a ≥2 lead),
+or "ei voitu yhdistää varmasti". Logic: `src/utils/teamHistory.ts`; calls and
+phone cache (`bb:` keys in localStorage; finished seasons forever, standings 6 h,
+getTeam and club index 24 h, stale copy on failure): `src/services/teamHistoryApi.ts`.
+Tests: `tests/teamHistory.test.mjs`, `tests/e2e/teamHistory.e2e.mjs` (390 px).
