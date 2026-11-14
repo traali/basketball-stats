@@ -163,6 +163,11 @@ async function basketGet(path: string): Promise<Record<string, unknown>> {
   throw new BasketApiError(path, [`${label} ${data?.call?.http ? `upstream ${data.call.http}` : message}`])
 }
 
+/** Raw signed TASO call (status "ok" checked). For modules that map their own fields. */
+export function fetchTasoRaw(path: string): Promise<Record<string, unknown>> {
+  return basketGet(path)
+}
+
 type CacheEntry = { at: number; data: Record<string, unknown>; ttl: number }
 const memCache = new Map<string, CacheEntry>()
 
